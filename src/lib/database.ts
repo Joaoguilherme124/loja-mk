@@ -166,7 +166,7 @@ async function initializeDatabase(): Promise<void> {
     db,
     "orders",
     "updatedAt",
-    "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+    "TIMESTAMP NOT NULL"
   );
 
   const [settings] = await db.query<RowDataPacket[]>("SELECT id FROM settings WHERE id = 1");
