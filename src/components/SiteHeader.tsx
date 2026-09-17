@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { CartDrawer } from "@/components/CartDrawer";
 import { FloatingCartButton } from "@/components/FloatingCartButton";
@@ -13,12 +14,20 @@ type Props = {
 export function SiteHeader({ storeName, whatsapp }: Props) {
   return (
     <header className="absolute inset-x-0 top-0 z-30">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8">
         <Link
           href="/"
-          className="rounded-sm font-display text-2xl tracking-[0.08em] text-foam outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-foam md:text-[1.7rem]"
+          className="outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-foam rounded-full"
+          aria-label={storeName}
         >
-          {storeName}
+          <Image
+            src="/logo-mk-gourmet.png"
+            alt={storeName}
+            width={56}
+            height={56}
+            className="h-12 w-12 rounded-full object-cover shadow-md ring-2 ring-foam/40 md:h-14 md:w-14"
+            priority
+          />
         </Link>
         <nav className="flex items-center gap-2 text-sm md:gap-3">
           <Link

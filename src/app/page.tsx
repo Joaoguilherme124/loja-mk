@@ -14,10 +14,7 @@ export default async function HomePage() {
   const featured = store.products.filter((p) => p.active && p.featured).slice(0, 3);
   const promotions = store.promotions.filter((p) => p.active).slice(0, 1);
   const news = store.news.filter((n) => n.active).slice(0, 2);
-  const heroImage =
-    promotions[0]?.image ||
-    featured[0]?.image ||
-    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80";
+  const heroImage = "/hero-mk-gourmet.jpg";
 
   const activeProducts = store.products.filter((p) => p.active);
   const bolo =

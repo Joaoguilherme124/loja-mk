@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -22,10 +23,21 @@ export function AdminSidebar() {
 
   return (
     <aside className="h-fit rounded-[1.4rem] border border-cappuccino/50 bg-foam/70 p-5 shadow-sm backdrop-blur">
-      <p className="font-display text-2xl text-espresso">MK Gourmet</p>
-      <p className="mt-1 text-xs uppercase tracking-[0.16em] text-mocha">
-        Painel
-      </p>
+      <div className="flex items-center gap-3">
+        <Image
+          src="/logo-mk-gourmet.png"
+          alt="MK Gourmet"
+          width={44}
+          height={44}
+          className="h-11 w-11 rounded-full object-cover ring-1 ring-cappuccino/50"
+        />
+        <div>
+          <p className="font-display text-2xl text-espresso">MK Gourmet</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-mocha">
+            Painel
+          </p>
+        </div>
+      </div>
       <nav className="mt-6 flex flex-col gap-1">
         {links.map((link) => {
           const active =
