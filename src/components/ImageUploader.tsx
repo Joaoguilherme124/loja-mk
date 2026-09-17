@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Props = {
   value?: string;
@@ -10,6 +10,7 @@ type Props = {
 export function ImageUploader({ value, onChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File | null) {
     if (!file) return;
@@ -37,11 +38,20 @@ export function ImageUploader({ value, onChange }: Props) {
     }
   }
 
+  function clearImage() {
+    onChange("");
+    setError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <div className="space-y-3">
       <label className="block space-y-2 text-sm font-medium text-espresso">
         Foto
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           className="field"
@@ -61,12 +71,22 @@ export function ImageUploader({ value, onChange }: Props) {
       {loading && <p className="text-sm text-mocha">Enviando imagem...</p>}
       {error && <p className="text-sm text-red-700">{error}</p>}
       {value ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={value}
-          alt="Pré-visualização"
-          className="h-36 w-full rounded-xl object-cover"
-        />
+        <div className="space-y-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt="Pré-visualização"
+            className="h-36 w-full rounded-xl object-cover"
+          />
+          <button
+            type="button"
+            className="btn-ghost !px-4 !py-2 !text-red-800"
+            onClick={clearImage}
+            disabled={loading}
+          >
+            Remover foto
+          </button>
+        </div>
       ) : null}
     </div>
   );
