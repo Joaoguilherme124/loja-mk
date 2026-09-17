@@ -123,17 +123,51 @@ async function initializeDatabase(): Promise<void> {
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  await db.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT FALSE");
-  await db.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
-  await db.execute("ALTER TABLE orders MODIFY status VARCHAR(32) NOT NULL DEFAULT 'pendente'");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customerName VARCHAR(255) NOT NULL DEFAULT ''");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customerEmail VARCHAR(255) NOT NULL DEFAULT ''");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customerPhone VARCHAR(64) NOT NULL DEFAULT ''");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS items JSON NULL");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT NULL");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deliveryDate DATE NULL");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deliveryTime VARCHAR(32) NOT NULL DEFAULT ''");
-  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+  await addColumnIfMissing(
+    db,
+    "products",
+    "featured",
+    "BOOLEAN NOT NULL DEFAULT FALSE"
+  );
+  await addColumnIfMissing(
+    db,
+    "products",
+    "createdAt",
+    "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+  );
+  await addColumnIfMissing(
+    db,
+    "orders",
+    "customerName",
+    "VARCHAR(255) NOT NULL DEFAULT ''"
+  );
+  await addColumnIfMissing(
+    db,
+    "orders",
+    "customerEmail",
+    "VARCHAR(255) NOT NULL DEFAULT ''"
+  );
+  await addColumnIfMissing(
+    db,
+    "orders",
+    "customerPhone",
+    "VARCHAR(64) NOT NULL DEFAULT ''"
+  );
+  await addColumnIfMissing(db, "orders", "items", "JSON NULL");
+  await addColumnIfMissing(db, "orders", "notes", "TEXT NULL");
+  await addColumnIfMissing(db, "orders", "deliveryDate", "DATE NULL");
+  await addColumnIfMissing(
+    db,
+    "orders",
+    "deliveryTime",
+    "VARCHAR(32) NOT NULL DEFAULT ''"
+  );
+  await addColumnIfMissing(
+    db,
+    "orders",
+    "updatedAt",
+    "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+  );
 
   const [settings] = await db.query<RowDataPacket[]>("SELECT id FROM settings WHERE id = 1");
   if (settings.length === 0) {
@@ -142,6 +176,26 @@ async function initializeDatabase(): Promise<void> {
       "INSERT INTO settings (id, storeName, tagline, whatsapp, about) VALUES (1, ?, ?, ?, ?)",
       [s.storeName, s.tagline, s.whatsapp, s.about]
     );
+  }
+
+  async function addColumnIfMissing(
+    db: Pool,
+    table: string,
+    column: string,
+    definition: string
+  ): Promise<void> {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+       LIMIT 1`,
+      [table, column]
+    );
+
+    if (rows.length === 0) {
+      await db.execute(
+        `ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`
+      );
+    }
   }
 }
 
