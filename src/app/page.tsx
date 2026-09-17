@@ -118,7 +118,7 @@ export default async function HomePage() {
                   Seleção
                 </p>
                 <h2 className="mt-2 font-display text-4xl text-espresso">
-                  Destaques do MK Gourmet
+                  Destaques MK Gourmet
                 </h2>
               </div>
               <Link
