@@ -61,7 +61,7 @@ async function initializeDatabase(): Promise<void> {
   const db = getPool();
   await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(191) PRIMARY KEY,
       email VARCHAR(191) NOT NULL UNIQUE,
       name VARCHAR(255) NOT NULL,
       passwordHash VARCHAR(255) NOT NULL,
@@ -72,7 +72,7 @@ async function initializeDatabase(): Promise<void> {
   `);
   await db.execute(`
     CREATE TABLE IF NOT EXISTS products (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(191) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
       price DECIMAL(10, 2) NOT NULL,
@@ -86,8 +86,8 @@ async function initializeDatabase(): Promise<void> {
   `);
   await db.execute(`
     CREATE TABLE IF NOT EXISTS orders (
-      id VARCHAR(255) PRIMARY KEY,
-      userId VARCHAR(255) NOT NULL,
+      id VARCHAR(191) PRIMARY KEY,
+      userId VARCHAR(191) NOT NULL,
       total DECIMAL(10, 2) NOT NULL,
       status VARCHAR(32) NOT NULL DEFAULT 'pendente',
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -104,7 +104,7 @@ async function initializeDatabase(): Promise<void> {
   `);
   await db.execute(`
     CREATE TABLE IF NOT EXISTS promotions (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(191) PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
       discountLabel VARCHAR(100) NOT NULL,
@@ -115,7 +115,7 @@ async function initializeDatabase(): Promise<void> {
   `);
   await db.execute(`
     CREATE TABLE IF NOT EXISTS news (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(191) PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
       content TEXT NOT NULL,
       image TEXT NOT NULL,
