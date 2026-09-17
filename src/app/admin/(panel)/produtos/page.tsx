@@ -2,8 +2,24 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { ImageUploader } from "@/components/ImageUploader";
-import type { Product } from "@/lib/types";
+import type { Product, ProductVariant } from "@/lib/types";
 import { formatPrice } from "@/lib/whatsapp";
+
+type VariantForm = {
+  id: string;
+  size: string;
+  style: string;
+  price: string;
+  image: string;
+};
+
+const emptyVariant = (): VariantForm => ({
+  id: `var_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+  size: "",
+  style: "",
+  price: "",
+  image: "",
+});
 
 const emptyForm = {
   name: "",
@@ -13,7 +29,19 @@ const emptyForm = {
   category: "Geral",
   featured: false,
   active: true,
+  variants: [] as VariantForm[],
 };
+
+function toVariantForms(variants?: ProductVariant[]): VariantForm[] {
+  if (!variants?.length) return [];
+  return variants.map((variant) => ({
+    id: variant.id,
+    size: variant.size,
+    style: variant.style,
+    price: String(variant.price),
+    image: variant.image,
+  }));
+}
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,6 +70,7 @@ export default function AdminProductsPage() {
       category: product.category,
       featured: product.featured,
       active: product.active,
+      variants: toVariantForms(product.variants),
     });
   }
 
@@ -50,19 +79,55 @@ export default function AdminProductsPage() {
     setForm(emptyForm);
   }
 
+  function updateVariant(id: string, patch: Partial<VariantForm>) {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.map((variant) =>
+        variant.id === id ? { ...variant, ...patch } : variant
+      ),
+    }));
+  }
+
+  function removeVariant(id: string) {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.filter((variant) => variant.id !== id),
+    }));
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setMessage("");
     try {
+      const variants = form.variants
+        .map((variant) => ({
+          id: variant.id,
+          size: variant.size.trim(),
+          style: variant.style.trim(),
+          price: Number(variant.price) || 0,
+          image: variant.image.trim(),
+        }))
+        .filter(
+          (variant) =>
+            variant.size && variant.style && variant.image && variant.price > 0
+        );
+
+      if (form.variants.length > 0 && variants.length !== form.variants.length) {
+        throw new Error(
+          "Preencha tamanho, estilo, preço e foto em todas as variações"
+        );
+      }
+
       const payload = {
         name: form.name,
         description: form.description,
-        price: Number(form.price),
+        price: Number(form.price) || 0,
         image: form.image,
         category: form.category,
         featured: form.featured,
         active: form.active,
+        variants,
       };
 
       const res = await fetch(
@@ -91,12 +156,14 @@ export default function AdminProductsPage() {
     await load();
   }
 
+  const usingVariants = form.variants.length > 0;
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-4xl text-espresso">Produtos</h1>
         <p className="mt-2 text-espresso/70">
-          Cadastre fotos, preços e descrições do catálogo.
+          Cadastre fotos, preços, descrições e variações (tamanho e estilo).
         </p>
       </div>
 
@@ -136,18 +203,24 @@ export default function AdminProductsPage() {
               required
             />
           </label>
-          <label className="space-y-2 text-sm font-medium">
-            Preço (R$)
-            <input
-              className="field"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              required
-            />
-          </label>
+          {!usingVariants ? (
+            <label className="space-y-2 text-sm font-medium">
+              Preço (R$)
+              <input
+                className="field"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                required={!usingVariants}
+              />
+            </label>
+          ) : (
+            <p className="text-sm text-espresso/65 md:col-span-1">
+              Com variações, o preço do catálogo usa o menor valor cadastrado.
+            </p>
+          )}
           <div className="flex flex-wrap items-end gap-4 pb-2 text-sm">
             <label className="flex items-center gap-2">
               <input
@@ -169,10 +242,109 @@ export default function AdminProductsPage() {
             </label>
           </div>
         </div>
-        <ImageUploader
-          value={form.image}
-          onChange={(image) => setForm({ ...form, image })}
-        />
+
+        {!usingVariants ? (
+          <ImageUploader
+            value={form.image}
+            onChange={(image) => setForm({ ...form, image })}
+          />
+        ) : null}
+
+        <div className="space-y-3 rounded-[1.1rem] border border-cappuccino/40 bg-white/40 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-display text-xl text-espresso">Variações</h3>
+              <p className="text-sm text-espresso/65">
+                Ex.: tamanho (12 a 15 fatias) e estilo (Cobertura / Vulcão).
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-ghost !px-4 !py-2"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  variants: [...current.variants, emptyVariant()],
+                }))
+              }
+            >
+              Adicionar variação
+            </button>
+          </div>
+
+          {form.variants.length === 0 ? (
+            <p className="text-sm text-espresso/60">
+              Sem variações: o produto usa uma foto e um preço únicos.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {form.variants.map((variant, index) => (
+                <div
+                  key={variant.id}
+                  className="space-y-3 rounded-xl border border-cappuccino/35 bg-foam/80 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-espresso">
+                      Variação {index + 1}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-ghost !px-3 !py-1.5 !text-sm !text-red-800"
+                      onClick={() => removeVariant(variant.id)}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <label className="space-y-2 text-sm font-medium">
+                      Tamanho
+                      <input
+                        className="field"
+                        placeholder="12 a 15 fatias"
+                        value={variant.size}
+                        onChange={(e) =>
+                          updateVariant(variant.id, { size: e.target.value })
+                        }
+                        required
+                      />
+                    </label>
+                    <label className="space-y-2 text-sm font-medium">
+                      Estilo
+                      <input
+                        className="field"
+                        placeholder="Cobertura ou Vulcão"
+                        value={variant.style}
+                        onChange={(e) =>
+                          updateVariant(variant.id, { style: e.target.value })
+                        }
+                        required
+                      />
+                    </label>
+                    <label className="space-y-2 text-sm font-medium">
+                      Preço (R$)
+                      <input
+                        className="field"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={variant.price}
+                        onChange={(e) =>
+                          updateVariant(variant.id, { price: e.target.value })
+                        }
+                        required
+                      />
+                    </label>
+                  </div>
+                  <ImageUploader
+                    value={variant.image}
+                    onChange={(image) => updateVariant(variant.id, { image })}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-wrap gap-3">
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? "Salvando..." : editingId ? "Atualizar" : "Publicar"}
@@ -201,7 +373,12 @@ export default function AdminProductsPage() {
             <div className="flex-1">
               <p className="font-semibold text-espresso">{product.name}</p>
               <p className="text-sm text-espresso/65">
-                {product.category} · {formatPrice(product.price)}
+                {product.category} ·{" "}
+                {(product.variants || []).length > 0
+                  ? `a partir de ${formatPrice(product.price)} · ${
+                      product.variants?.length
+                    } variações`
+                  : formatPrice(product.price)}
                 {!product.active ? " · oculto" : ""}
                 {product.featured ? " · destaque" : ""}
               </p>

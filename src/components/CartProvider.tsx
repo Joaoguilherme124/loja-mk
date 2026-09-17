@@ -12,6 +12,7 @@ import {
 
 export type CartItem = {
   productId: string;
+  variantId?: string;
   name: string;
   price: number;
   image: string;
@@ -36,8 +37,8 @@ type CartContextValue = {
   openCart: () => void;
   closeCart: () => void;
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  setQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string, variantId?: string) => void;
+  setQuantity: (productId: string, quantity: number, variantId?: string) => void;
   applyCombo: (
     products: Omit<CartItem, "quantity">[],
     promo: Omit<CartPromo, "productIds"> & { productIds?: string[] }
@@ -45,9 +46,16 @@ type CartContextValue = {
   clearCart: () => void;
 };
 
-const STORAGE_KEY = "mk-gourmet-cart-v2";
+const STORAGE_KEY = "mk-gourmet-cart-v3";
 
 const CartContext = createContext<CartContextValue | null>(null);
+
+function sameLine(
+  a: Pick<CartItem, "productId" | "variantId">,
+  b: Pick<CartItem, "productId" | "variantId">
+) {
+  return a.productId === b.productId && (a.variantId || "") === (b.variantId || "");
+}
 
 function parsePercent(label: string, fallback = 0) {
   const match = label.match(/(\d+(?:[.,]\d+)?)\s*%/);
@@ -65,6 +73,7 @@ function loadState(): { items: CartItem[]; promo: CartPromo | null } {
       ? parsed.items
           .map((item: CartItem) => ({
             productId: String(item.productId || ""),
+            variantId: item.variantId ? String(item.variantId) : undefined,
             name: String(item.name || ""),
             price: Number(item.price) || 0,
             image: String(item.image || ""),
@@ -127,12 +136,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (item: Omit<CartItem, "quantity">, quantity = 1) => {
       const qty = Math.max(1, quantity);
       setItems((current) => {
-        const existing = current.find(
-          (entry) => entry.productId === item.productId
-        );
+        const existing = current.find((entry) => sameLine(entry, item));
         if (existing) {
           return current.map((entry) =>
-            entry.productId === item.productId
+            sameLine(entry, item)
               ? { ...entry, quantity: entry.quantity + qty }
               : entry
           );
@@ -144,11 +151,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const removeItem = useCallback((productId: string) => {
-    setItems((current) => {
-      const next = current.filter((item) => item.productId !== productId);
-      return next;
-    });
+  const removeItem = useCallback((productId: string, variantId?: string) => {
+    setItems((current) =>
+      current.filter((item) => !sameLine(item, { productId, variantId }))
+    );
     setPromo((current) => {
       if (!current) return null;
       if (!current.productIds.includes(productId)) return current;
@@ -156,14 +162,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setQuantity = useCallback((productId: string, quantity: number) => {
-    const next = Math.max(1, quantity);
-    setItems((current) =>
-      current.map((item) =>
-        item.productId === productId ? { ...item, quantity: next } : item
-      )
-    );
-  }, []);
+  const setQuantity = useCallback(
+    (productId: string, quantity: number, variantId?: string) => {
+      const next = Math.max(1, quantity);
+      setItems((current) =>
+        current.map((item) =>
+          sameLine(item, { productId, variantId })
+            ? { ...item, quantity: next }
+            : item
+        )
+      );
+    },
+    []
+  );
 
   const applyCombo = useCallback(
     (

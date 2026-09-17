@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
+import { hasVariants } from "@/lib/product-variants";
 import { formatPrice } from "@/lib/whatsapp";
 
 interface CartItem {
@@ -49,6 +50,10 @@ export default function OrderPage() {
   }, [router]);
 
   function addToCart(product: Product) {
+    if (hasVariants(product)) {
+      router.push(`/produto/${product.id}`);
+      return;
+    }
     const existing = cart.find((item) => item.productId === product.id);
     if (existing) {
       existing.quantity++;
@@ -175,13 +180,15 @@ export default function OrderPage() {
                     </p>
                     <div className="flex items-center justify-between">
                       <span className="font-display text-lg text-caramel">
-                        {formatPrice(product.price)}
+                        {hasVariants(product)
+                          ? `A partir de ${formatPrice(product.price)}`
+                          : formatPrice(product.price)}
                       </span>
                       <button
                         onClick={() => addToCart(product)}
                         className="btn-primary !px-3 !py-1.5 text-sm"
                       >
-                        Adicionar
+                        {hasVariants(product) ? "Escolher" : "Adicionar"}
                       </button>
                     </div>
                   </div>

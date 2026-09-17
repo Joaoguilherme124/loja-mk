@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { parseVariants, withSyncedPricing } from "@/lib/product-variants";
 import { createId, readStore, writeStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
 
@@ -15,8 +16,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const store = await readStore();
+  const variants = parseVariants(body.variants);
 
-  const product: Product = {
+  const product = withSyncedPricing({
     id: createId("p"),
     name: String(body.name || "").trim(),
     description: String(body.description || "").trim(),
@@ -26,11 +28,23 @@ export async function POST(request: Request) {
     featured: Boolean(body.featured),
     active: body.active !== false,
     createdAt: new Date().toISOString(),
-  };
+    variants,
+  } satisfies Product);
 
-  if (!product.name || !product.image) {
+  if (!product.name) {
+    return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
+  }
+
+  if (variants.length === 0 && (!product.image || product.price <= 0)) {
     return NextResponse.json(
-      { error: "Nome e imagem são obrigatórios" },
+      { error: "Nome, imagem e preço são obrigatórios" },
+      { status: 400 }
+    );
+  }
+
+  if (variants.length > 0 && !product.image) {
+    return NextResponse.json(
+      { error: "Cada variação precisa de foto" },
       { status: 400 }
     );
   }

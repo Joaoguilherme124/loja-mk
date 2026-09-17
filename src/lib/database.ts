@@ -1,5 +1,6 @@
 import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
 import { defaultStore } from "./seed";
+import { parseVariants } from "./product-variants";
 import type {
   NewsItem,
   Order,
@@ -20,6 +21,7 @@ type ProductRow = RowDataPacket & {
   featured: number;
   active: number;
   createdAt: string;
+  variants?: string | null;
 };
 type OrderRow = RowDataPacket & {
   id: string;
@@ -135,6 +137,7 @@ async function initializeDatabase(): Promise<void> {
     "createdAt",
     "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
   );
+  await addColumnIfMissing(db, "products", "variants", "TEXT NULL");
   await addColumnIfMissing(
     db,
     "orders",
@@ -227,13 +230,21 @@ export async function readDatabase(): Promise<DatabaseData> {
       about: String(s.about),
     },
     users: users.map((user) => ({ ...user, active: Boolean(user.active) })),
-    products: products.map((product) => ({
-      ...product,
-      price: Number(product.price),
-      featured: Boolean(product.featured),
-      active: Boolean(product.active),
-      createdAt: new Date(product.createdAt).toISOString(),
-    })),
+    products: products.map((product) => {
+      const variants = parseVariants(product.variants);
+      return {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: Number(product.price),
+        category: product.category,
+        image: product.image,
+        featured: Boolean(product.featured),
+        active: Boolean(product.active),
+        createdAt: new Date(product.createdAt).toISOString(),
+        variants,
+      } satisfies Product;
+    }),
     promotions: promotions as Promotion[],
     news: news as NewsItem[],
     orders: orders.map((order) => ({
@@ -264,8 +275,19 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
     await connection.execute("DELETE FROM products");
     for (const product of data.products) {
       await connection.execute(
-        "INSERT INTO products (id, name, description, price, category, image, featured, active, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [product.id, product.name, product.description, product.price, product.category, product.image, product.featured, product.active, product.createdAt]
+        "INSERT INTO products (id, name, description, price, category, image, featured, active, createdAt, variants) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          product.id,
+          product.name,
+          product.description,
+          product.price,
+          product.category,
+          product.image,
+          product.featured,
+          product.active,
+          product.createdAt,
+          JSON.stringify(product.variants || []),
+        ]
       );
     }
     await connection.execute("DELETE FROM promotions");

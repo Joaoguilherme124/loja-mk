@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { parseVariants, withSyncedPricing } from "@/lib/product-variants";
 import { readStore, writeStore } from "@/lib/store";
 
 type Params = { params: Promise<{ id: string }> };
@@ -28,17 +29,35 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
   }
 
-  store.products[index] = {
-    ...store.products[index],
-    name: String(body.name ?? store.products[index].name).trim(),
-    description: String(body.description ?? store.products[index].description).trim(),
-    price: Number(body.price ?? store.products[index].price),
-    image: String(body.image ?? store.products[index].image).trim(),
-    category: String(body.category ?? store.products[index].category).trim(),
+  const current = store.products[index];
+  const variants = parseVariants(
+    body.variants !== undefined ? body.variants : current.variants
+  );
+
+  const product = withSyncedPricing({
+    ...current,
+    name: String(body.name ?? current.name).trim(),
+    description: String(body.description ?? current.description).trim(),
+    price: Number(body.price ?? current.price),
+    image: String(body.image ?? current.image).trim(),
+    category: String(body.category ?? current.category).trim(),
     featured: Boolean(body.featured),
     active: body.active !== false,
-  };
+    variants,
+  });
 
+  if (!product.name) {
+    return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
+  }
+
+  if (variants.length === 0 && !product.image) {
+    return NextResponse.json(
+      { error: "Imagem é obrigatória (ou adicione variações)" },
+      { status: 400 }
+    );
+  }
+
+  store.products[index] = product;
   await writeStore(store);
   return NextResponse.json(store.products[index]);
 }

@@ -1,3 +1,11 @@
+export type ProductVariant = {
+  id: string;
+  size: string;
+  style: string;
+  price: number;
+  image: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -8,6 +16,7 @@ export type Product = {
   featured: boolean;
   active: boolean;
   createdAt: string;
+  variants?: ProductVariant[];
 };
 
 export type Promotion = {
@@ -60,6 +69,8 @@ export type OrderItem = {
   productName: string;
   quantity: number;
   price: number;
+  variantId?: string;
+  variantLabel?: string;
 };
 
 export type OrderStatus =

@@ -114,7 +114,11 @@ export function CartDrawer({ whatsapp }: Props) {
                         type="button"
                         className="h-8 w-8 rounded-full border border-cappuccino bg-white/80"
                         onClick={() =>
-                          setQuantity(item.productId, item.quantity - 1)
+                          setQuantity(
+                            item.productId,
+                            item.quantity - 1,
+                            item.variantId
+                          )
                         }
                         aria-label="Diminuir"
                       >
@@ -127,7 +131,11 @@ export function CartDrawer({ whatsapp }: Props) {
                         type="button"
                         className="h-8 w-8 rounded-full border border-cappuccino bg-white/80"
                         onClick={() =>
-                          setQuantity(item.productId, item.quantity + 1)
+                          setQuantity(
+                            item.productId,
+                            item.quantity + 1,
+                            item.variantId
+                          )
                         }
                         aria-label="Aumentar"
                       >
@@ -136,7 +144,9 @@ export function CartDrawer({ whatsapp }: Props) {
                       <button
                         type="button"
                         className="ml-auto text-xs font-semibold text-red-800"
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() =>
+                          removeItem(item.productId, item.variantId)
+                        }
                       >
                         Remover
                       </button>

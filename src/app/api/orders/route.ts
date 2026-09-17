@@ -74,16 +74,37 @@ export async function POST(request: Request) {
 
     const rawItems = Array.isArray(body.items) ? body.items : [];
     const items: OrderItem[] = rawItems
-      .map((item: { productId?: string; quantity?: number }) => {
-        const product = store.products.find((p) => p.id === item.productId);
-        if (!product) return null;
-        return {
-          productId: product.id,
-          productName: product.name,
-          quantity: Math.max(1, Number(item.quantity) || 1),
-          price: product.price,
-        };
-      })
+      .map(
+        (item: {
+          productId?: string;
+          quantity?: number;
+          variantId?: string;
+        }) => {
+          const product = store.products.find((p) => p.id === item.productId);
+          if (!product) return null;
+          const variant =
+            (product.variants || []).find(
+              (entry) => entry.id === item.variantId
+            ) ||
+            ((product.variants || []).length > 0
+              ? product.variants![0]
+              : undefined);
+          const price = variant?.price ?? product.price;
+          const variantLabelText = variant
+            ? `${variant.size} · ${variant.style}`
+            : undefined;
+          return {
+            productId: product.id,
+            productName: variantLabelText
+              ? `${product.name} (${variantLabelText})`
+              : product.name,
+            quantity: Math.max(1, Number(item.quantity) || 1),
+            price,
+            variantId: variant?.id,
+            variantLabel: variantLabelText,
+          };
+        }
+      )
       .filter(Boolean) as OrderItem[];
 
     const totalPrice = items.reduce(

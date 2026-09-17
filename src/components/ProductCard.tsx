@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
+import { displayPrice, hasVariants } from "@/lib/product-variants";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/whatsapp";
 
@@ -12,6 +13,8 @@ type Props = {
 
 export function ProductCard({ product }: Props) {
   const { addItem } = useCart();
+  const price = displayPrice(product);
+  const withOptions = hasVariants(product);
 
   return (
     <article className="border-b border-cappuccino/40 py-4 first:pt-0 last:border-b-0 last:pb-0">
@@ -47,29 +50,33 @@ export function ProductCard({ product }: Props) {
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-base font-semibold text-mocha md:text-lg">
-              {formatPrice(product.price)}
+              {withOptions
+                ? `A partir de ${formatPrice(price)}`
+                : formatPrice(price)}
             </p>
             <div className="flex gap-2">
               <Link
                 href={`/produto/${product.id}`}
                 className="btn-ghost !px-3 !py-2 !text-sm"
               >
-                Detalhes
+                {withOptions ? "Escolher" : "Detalhes"}
               </Link>
-              <button
-                type="button"
-                className="btn-primary !px-3 !py-2 !text-sm"
-                onClick={() =>
-                  addItem({
-                    productId: product.id,
-                    name: product.name,
-                    price: product.price,
-                    image: product.image,
-                  })
-                }
-              >
-                Adicionar
-              </button>
+              {!withOptions ? (
+                <button
+                  type="button"
+                  className="btn-primary !px-3 !py-2 !text-sm"
+                  onClick={() =>
+                    addItem({
+                      productId: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: product.image,
+                    })
+                  }
+                >
+                  Adicionar
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
