@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #f3e9d7;
+  --cappuccino: #d6bfa6;
+  --caramel: #b08968;
+  --mocha: #7a553a;
+  --espresso: #3b2a22;
+  --cream-deep: #ebe0cc;
+  --foam: #faf6ef;
+  --background: var(--cream);
+  --foreground: var(--espresso);
+  --accent: var(--caramel);
+  --accent-deep: var(--mocha);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-cream: var(--cream);
+  --color-cappuccino: var(--cappuccino);
+  --color-caramel: var(--caramel);
+  --color-mocha: var(--mocha);
+  --color-espresso: var(--espresso);
+  --color-foam: var(--foam);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--mocha);
+  outline-offset: 3px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 90% 60% at 10% -10%, rgba(176, 137, 104, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(122, 85, 58, 0.12), transparent 50%),
+    linear-gradient(180deg, var(--foam) 0%, var(--cream) 45%, var(--cream-deep) 100%);
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--caramel) 45%, white);
+  color: var(--espresso);
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.grain {
+  position: relative;
+}
+
+.grain::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.reveal {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reveal-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.reveal-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.reveal-delay-3 {
+  animation-delay: 0.36s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes softFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.float-soft {
+  animation: softFloat 7s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--caramel), var(--mocha));
+  color: var(--foam);
+  padding: 0.85rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  box-shadow: 0 10px 28px rgba(59, 42, 34, 0.18);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow: 0 14px 32px rgba(59, 42, 34, 0.24);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--mocha) 35%, transparent);
+  color: var(--espresso);
+  padding: 0.85rem 1.4rem;
+  border-radius: 999px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--foam) 70%, transparent);
+  backdrop-filter: blur(8px);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--cappuccino) 45%, white);
+  transform: translateY(-2px);
+}
+
+.field {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--cappuccino) 80%, var(--mocha));
+  background: color-mix(in srgb, var(--foam) 88%, white);
+  border-radius: 0.9rem;
+  padding: 0.75rem 0.95rem;
+  color: var(--espresso);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field:focus {
+  border-color: var(--caramel);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--caramel) 28%, transparent);
+}
+
+.admin-shell {
+  background:
+    linear-gradient(160deg, #faf6ef 0%, #f3e9d7 50%, #ebe0cc 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
