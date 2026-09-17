@@ -19,8 +19,16 @@ export function ImageUploader({ value, onChange }: Props) {
       const form = new FormData();
       form.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha no upload");
+      const contentType = res.headers.get("content-type");
+      const data = contentType?.includes("application/json")
+        ? await res.json()
+        : null;
+      if (!res.ok) {
+        throw new Error(data?.error || `Falha no upload (${res.status})`);
+      }
+      if (!data?.url) {
+        throw new Error("O servidor não retornou a URL da imagem");
+      }
       onChange(data.url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar imagem");
