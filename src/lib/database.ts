@@ -153,7 +153,7 @@ async function initializeDatabase(): Promise<void> {
     "customerPhone",
     "VARCHAR(64) NOT NULL DEFAULT ''"
   );
-  await addColumnIfMissing(db, "orders", "items", "JSON NULL");
+  await addColumnIfMissing(db, "orders", "items", "TEXT NULL");
   await addColumnIfMissing(db, "orders", "notes", "TEXT NULL");
   await addColumnIfMissing(db, "orders", "deliveryDate", "DATE NULL");
   await addColumnIfMissing(
