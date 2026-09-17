@@ -60,6 +60,40 @@ async function initializeDatabase(): Promise<void> {
 
   const db = getPool();
   await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id VARCHAR(255) PRIMARY KEY,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      name VARCHAR(255) NOT NULL,
+      passwordHash VARCHAR(255) NOT NULL,
+      role VARCHAR(32) NOT NULL DEFAULT 'cliente',
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS products (
+      id VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT NOT NULL,
+      price DECIMAL(10, 2) NOT NULL,
+      category VARCHAR(100) NOT NULL,
+      image TEXT NOT NULL,
+      stock INT NOT NULL DEFAULT 0,
+      featured BOOLEAN NOT NULL DEFAULT FALSE,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id VARCHAR(255) PRIMARY KEY,
+      userId VARCHAR(255) NOT NULL,
+      total DECIMAL(10, 2) NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'pendente',
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS settings (
       id TINYINT UNSIGNED PRIMARY KEY,
       storeName VARCHAR(255) NOT NULL,
