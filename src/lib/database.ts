@@ -1,4 +1,4 @@
-import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
+import { Pool, type QueryResultRow } from "pg";
 import { defaultStore } from "./seed";
 import { parseVariants } from "./product-variants";
 import type {
@@ -10,27 +10,27 @@ import type {
   User,
 } from "./types";
 
-type UserRow = RowDataPacket & User;
-type ProductRow = RowDataPacket & {
+type UserRow = QueryResultRow & User;
+type ProductRow = QueryResultRow & {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price: number | string;
   category: string;
   image: string;
-  featured: number;
-  active: number;
+  featured: boolean;
+  active: boolean;
   createdAt: string;
   variants?: string | null;
 };
-type OrderRow = RowDataPacket & {
+type OrderRow = QueryResultRow & {
   id: string;
   userId: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
   items: string | Order["items"];
-  total: number;
+  total: number | string;
   status: Order["status"];
   notes: string;
   deliveryDate: string;
@@ -53,26 +53,23 @@ async function initializeDatabase(): Promise<void> {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL não foi configurada.");
 
-  pool = mysql.createPool({
-    uri: url,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
+  pool = new Pool({
+    connectionString: url,
+    max: 10,
+    ssl: url.includes("supabase") ? { rejectUnauthorized: false } : undefined,
   });
 
   const db = getPool();
-  await db.execute(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(191) PRIMARY KEY,
       email VARCHAR(191) NOT NULL UNIQUE,
       name VARCHAR(255) NOT NULL,
-      passwordHash VARCHAR(255) NOT NULL,
+      "passwordHash" VARCHAR(255) NOT NULL,
       role VARCHAR(32) NOT NULL DEFAULT 'cliente',
       active BOOLEAN NOT NULL DEFAULT TRUE,
-      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await db.execute(`
+      "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS products (
       id VARCHAR(191) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -80,129 +77,64 @@ async function initializeDatabase(): Promise<void> {
       price DECIMAL(10, 2) NOT NULL,
       category VARCHAR(100) NOT NULL,
       image TEXT NOT NULL,
-      stock INT NOT NULL DEFAULT 0,
+      stock INTEGER NOT NULL DEFAULT 0,
       featured BOOLEAN NOT NULL DEFAULT FALSE,
       active BOOLEAN NOT NULL DEFAULT TRUE,
-      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await db.execute(`
+      variants TEXT NULL,
+      "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS orders (
       id VARCHAR(191) PRIMARY KEY,
-      userId VARCHAR(191) NOT NULL,
+      "userId" VARCHAR(191) NOT NULL,
+      "customerName" VARCHAR(255) NOT NULL DEFAULT '',
+      "customerEmail" VARCHAR(255) NOT NULL DEFAULT '',
+      "customerPhone" VARCHAR(64) NOT NULL DEFAULT '',
+      items TEXT NULL,
       total DECIMAL(10, 2) NOT NULL,
       status VARCHAR(32) NOT NULL DEFAULT 'pendente',
-      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await db.execute(`
+      notes TEXT NULL,
+      "deliveryDate" DATE NULL,
+      "deliveryTime" VARCHAR(32) NOT NULL DEFAULT '',
+      "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS settings (
-      id TINYINT UNSIGNED PRIMARY KEY,
-      storeName VARCHAR(255) NOT NULL,
+      id SMALLINT PRIMARY KEY,
+      "storeName" VARCHAR(255) NOT NULL,
       tagline TEXT NOT NULL,
       whatsapp VARCHAR(32) NOT NULL,
       about TEXT NOT NULL
-    )
-  `);
-  await db.execute(`
+    );
     CREATE TABLE IF NOT EXISTS promotions (
       id VARCHAR(191) PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL,
-      discountLabel VARCHAR(100) NOT NULL,
+      "discountLabel" VARCHAR(100) NOT NULL,
       image TEXT NOT NULL,
       active BOOLEAN NOT NULL DEFAULT TRUE,
-      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await db.execute(`
+      "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS news (
       id VARCHAR(191) PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
       content TEXT NOT NULL,
       image TEXT NOT NULL,
       active BOOLEAN NOT NULL DEFAULT TRUE,
-      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
+      "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
-  await addColumnIfMissing(
-    db,
-    "products",
-    "featured",
-    "BOOLEAN NOT NULL DEFAULT FALSE"
-  );
-  await addColumnIfMissing(
-    db,
-    "products",
-    "createdAt",
-    "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
-  );
-  await addColumnIfMissing(db, "products", "variants", "TEXT NULL");
-  await addColumnIfMissing(
-    db,
-    "orders",
-    "customerName",
-    "VARCHAR(255) NOT NULL DEFAULT ''"
-  );
-  await addColumnIfMissing(
-    db,
-    "orders",
-    "customerEmail",
-    "VARCHAR(255) NOT NULL DEFAULT ''"
-  );
-  await addColumnIfMissing(
-    db,
-    "orders",
-    "customerPhone",
-    "VARCHAR(64) NOT NULL DEFAULT ''"
-  );
-  await addColumnIfMissing(db, "orders", "items", "TEXT NULL");
-  await addColumnIfMissing(db, "orders", "notes", "TEXT NULL");
-  await addColumnIfMissing(db, "orders", "deliveryDate", "DATE NULL");
-  await addColumnIfMissing(
-    db,
-    "orders",
-    "deliveryTime",
-    "VARCHAR(32) NOT NULL DEFAULT ''"
-  );
-  await addColumnIfMissing(
-    db,
-    "orders",
-    "updatedAt",
-    "TIMESTAMP NULL"
-  );
 
-  const [settings] = await db.query<RowDataPacket[]>("SELECT id FROM settings WHERE id = 1");
-  if (settings.length === 0) {
+  const settings = await db.query('SELECT id FROM settings WHERE id = 1');
+  if (settings.rowCount === 0) {
     const s = defaultStore.settings;
-    await db.execute(
-      "INSERT INTO settings (id, storeName, tagline, whatsapp, about) VALUES (1, ?, ?, ?, ?)",
+    await db.query(
+      'INSERT INTO settings (id, "storeName", tagline, whatsapp, about) VALUES (1, $1, $2, $3, $4)',
       [s.storeName, s.tagline, s.whatsapp, s.about]
     );
   }
-
-  async function addColumnIfMissing(
-    db: Pool,
-    table: string,
-    column: string,
-    definition: string
-  ): Promise<void> {
-    const [rows] = await db.query<RowDataPacket[]>(
-      `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
-       LIMIT 1`,
-      [table, column]
-    );
-
-    if (rows.length === 0) {
-      await db.execute(
-        `ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`
-      );
-    }
-  }
 }
 
-async function ensureDatabase() {
+async function ensureDatabase(): Promise<void> {
   initialized ??= initializeDatabase().catch((error) => {
     initialized = undefined;
     pool = undefined;
@@ -214,13 +146,16 @@ async function ensureDatabase() {
 export async function readDatabase(): Promise<DatabaseData> {
   await ensureDatabase();
   const db = getPool();
-  const [settings] = await db.query<RowDataPacket[]>("SELECT * FROM settings WHERE id = 1");
-  const [users] = await db.query<UserRow[]>("SELECT * FROM users");
-  const [products] = await db.query<ProductRow[]>("SELECT * FROM products");
-  const [promotions] = await db.query<RowDataPacket[]>("SELECT * FROM promotions");
-  const [news] = await db.query<RowDataPacket[]>("SELECT * FROM news");
-  const [orders] = await db.query<OrderRow[]>("SELECT * FROM orders ORDER BY createdAt DESC");
-  const s = settings[0] ?? defaultStore.settings;
+  const [settingsResult, usersResult, productsResult, promotionsResult, newsResult, ordersResult] =
+    await Promise.all([
+      db.query('SELECT * FROM settings WHERE id = 1'),
+      db.query<UserRow>("SELECT * FROM users"),
+      db.query<ProductRow>('SELECT * FROM products'),
+      db.query<Promotion>("SELECT * FROM promotions"),
+      db.query<NewsItem>("SELECT * FROM news"),
+      db.query<OrderRow>('SELECT * FROM orders ORDER BY "createdAt" DESC'),
+    ]);
+  const s = settingsResult.rows[0] ?? defaultStore.settings;
 
   return {
     settings: {
@@ -229,25 +164,22 @@ export async function readDatabase(): Promise<DatabaseData> {
       whatsapp: String(s.whatsapp),
       about: String(s.about),
     },
-    users: users.map((user) => ({ ...user, active: Boolean(user.active) })),
-    products: products.map((product) => {
-      const variants = parseVariants(product.variants);
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: Number(product.price),
-        category: product.category,
-        image: product.image,
-        featured: Boolean(product.featured),
-        active: Boolean(product.active),
-        createdAt: new Date(product.createdAt).toISOString(),
-        variants,
-      } satisfies Product;
-    }),
-    promotions: promotions as Promotion[],
-    news: news as NewsItem[],
-    orders: orders.map((order) => ({
+    users: usersResult.rows.map((user) => ({ ...user, active: Boolean(user.active) })),
+    products: productsResult.rows.map((product) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      category: product.category,
+      image: product.image,
+      featured: Boolean(product.featured),
+      active: Boolean(product.active),
+      createdAt: new Date(product.createdAt).toISOString(),
+      variants: parseVariants(product.variants),
+    }) satisfies Product),
+    promotions: promotionsResult.rows as Promotion[],
+    news: newsResult.rows as NewsItem[],
+    orders: ordersResult.rows.map((order) => ({
       ...order,
       items:
         typeof order.items === "string"
@@ -262,65 +194,53 @@ export async function readDatabase(): Promise<DatabaseData> {
 
 export async function writeDatabase(data: DatabaseData): Promise<void> {
   await ensureDatabase();
-  const db = getPool();
-  const connection = await db.getConnection();
+  const client = await getPool().connect();
   try {
-    await connection.beginTransaction();
-    await connection.execute(
-      "UPDATE settings SET storeName = ?, tagline = ?, whatsapp = ?, about = ? WHERE id = 1",
+    await client.query("BEGIN");
+    await client.query(
+      'UPDATE settings SET "storeName" = $1, tagline = $2, whatsapp = $3, about = $4 WHERE id = 1',
       [data.settings.storeName, data.settings.tagline, data.settings.whatsapp, data.settings.about]
     );
-    await connection.execute("DELETE FROM orders");
-    await connection.execute("DELETE FROM users");
-    await connection.execute("DELETE FROM products");
+    await client.query("DELETE FROM orders");
+    await client.query("DELETE FROM users");
+    await client.query("DELETE FROM products");
     for (const product of data.products) {
-      await connection.execute(
-        "INSERT INTO products (id, name, description, price, category, image, featured, active, createdAt, variants) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          product.id,
-          product.name,
-          product.description,
-          product.price,
-          product.category,
-          product.image,
-          product.featured,
-          product.active,
-          product.createdAt,
-          JSON.stringify(product.variants || []),
-        ]
+      await client.query(
+        'INSERT INTO products (id, name, description, price, category, image, featured, active, "createdAt", variants) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+        [product.id, product.name, product.description, product.price, product.category, product.image, product.featured, product.active, product.createdAt, JSON.stringify(product.variants || [])]
       );
     }
-    await connection.execute("DELETE FROM promotions");
+    await client.query("DELETE FROM promotions");
     for (const promotion of data.promotions) {
-      await connection.execute(
-        "INSERT INTO promotions (id, title, description, discountLabel, image, active, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      await client.query(
+        'INSERT INTO promotions (id, title, description, "discountLabel", image, active, "createdAt") VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [promotion.id, promotion.title, promotion.description, promotion.discountLabel, promotion.image, promotion.active, promotion.createdAt]
       );
     }
-    await connection.execute("DELETE FROM news");
+    await client.query("DELETE FROM news");
     for (const item of data.news) {
-      await connection.execute(
-        "INSERT INTO news (id, title, content, image, active, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+      await client.query(
+        'INSERT INTO news (id, title, content, image, active, "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
         [item.id, item.title, item.content, item.image, item.active, item.createdAt]
       );
     }
     for (const user of data.users) {
-      await connection.execute(
-        "INSERT INTO users (id, email, name, passwordHash, role, active, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      await client.query(
+        'INSERT INTO users (id, email, name, "passwordHash", role, active, "createdAt") VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [user.id, user.email, user.name, user.passwordHash, user.role, user.active, user.createdAt]
       );
     }
     for (const order of data.orders) {
-      await connection.execute(
-        "INSERT INTO orders (id, userId, customerName, customerEmail, customerPhone, items, total, status, notes, deliveryDate, deliveryTime, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      await client.query(
+        'INSERT INTO orders (id, "userId", "customerName", "customerEmail", "customerPhone", items, total, status, notes, "deliveryDate", "deliveryTime", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
         [order.id, order.userId, order.customerName, order.customerEmail, order.customerPhone, JSON.stringify(order.items), order.totalPrice, order.status, order.notes, order.deliveryDate, order.deliveryTime ?? "", order.createdAt, order.updatedAt]
       );
     }
-    await connection.commit();
+    await client.query("COMMIT");
   } catch (error) {
-    await connection.rollback();
+    await client.query("ROLLBACK");
     throw error;
   } finally {
-    connection.release();
+    client.release();
   }
 }
