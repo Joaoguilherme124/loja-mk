@@ -1,4 +1,5 @@
-import type { Product } from "./types";
+import { formatQuantity, formatRate, isSoldByKg } from "./sold-by";
+import type { Product, SoldBy } from "./types";
 
 export function formatPrice(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -9,12 +10,19 @@ export function formatPrice(value: number) {
 
 export function buildWhatsAppLink(
   phone: string,
-  product: Pick<Product, "name" | "price">,
+  product: Pick<Product, "name" | "price"> & { soldBy?: SoldBy },
   quantity = 1
 ) {
   const digits = phone.replace(/\D/g, "");
+  const soldBy = product.soldBy || "unit";
   const total = formatPrice(product.price * quantity);
-  const message = `Olá! Quero pedir: *${product.name}* — ${quantity} unidade(s). Valor: ${total}. Pode confirmar?`;
+  const qtyLabel = isSoldByKg(soldBy)
+    ? formatQuantity(quantity, soldBy)
+    : `${quantity} unidade(s)`;
+  const rateHint = isSoldByKg(soldBy)
+    ? ` (${formatRate(product.price, soldBy, formatPrice)})`
+    : "";
+  const message = `Olá! Quero pedir: *${product.name}* — ${qtyLabel}${rateHint}. Valor: ${total}. Pode confirmar?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
@@ -29,6 +37,7 @@ export type CartWhatsAppItem = {
   name: string;
   quantity: number;
   price: number;
+  soldBy?: SoldBy;
 };
 
 export function buildCartWhatsAppLink(
@@ -44,10 +53,13 @@ export function buildCartWhatsAppLink(
   }
 ) {
   const digits = phone.replace(/\D/g, "");
-  const lines = items.map(
-    (item) =>
-      `• ${item.quantity}x ${item.name} — ${formatPrice(item.price * item.quantity)}`
-  );
+  const lines = items.map((item) => {
+    const soldBy = item.soldBy || "unit";
+    const qty = isSoldByKg(soldBy)
+      ? formatQuantity(item.quantity, soldBy)
+      : `${item.quantity}x`;
+    return `• ${qty} ${item.name} — ${formatPrice(item.price * item.quantity)}`;
+  });
   const subtotal =
     promo?.subtotal ??
     items.reduce((sum, item) => sum + item.price * item.quantity, 0);

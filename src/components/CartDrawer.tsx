@@ -2,6 +2,12 @@
 
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
+import {
+  formatQuantity,
+  formatRate,
+  isSoldByKg,
+  quantityStep,
+} from "@/lib/sold-by";
 import { buildCartWhatsAppLink, formatPrice } from "@/lib/whatsapp";
 
 type Props = {
@@ -32,6 +38,7 @@ export function CartDrawer({ whatsapp }: Props) {
             name: item.name,
             quantity: item.quantity,
             price: item.price,
+            soldBy: item.soldBy,
           })),
           undefined,
           promo && discount > 0
@@ -88,9 +95,12 @@ export function CartDrawer({ whatsapp }: Props) {
                 </div>
               ) : null}
 
-              {items.map((item) => (
+              {items.map((item) => {
+                const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+                const step = quantityStep(item.soldBy, kind);
+                return (
                 <div
-                  key={item.productId}
+                  key={`${item.productId}:${item.variantId || ""}`}
                   className="flex gap-3 rounded-2xl border border-cappuccino/40 bg-white/50 p-3"
                 >
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-cappuccino/30">
@@ -107,7 +117,7 @@ export function CartDrawer({ whatsapp }: Props) {
                       {item.name}
                     </p>
                     <p className="text-sm text-mocha">
-                      {formatPrice(item.price)}
+                      {formatRate(item.price, item.soldBy, formatPrice)}
                     </p>
                     <div className="mt-2 flex items-center gap-2">
                       <button
@@ -116,7 +126,7 @@ export function CartDrawer({ whatsapp }: Props) {
                         onClick={() =>
                           setQuantity(
                             item.productId,
-                            item.quantity - 1,
+                            item.quantity - step,
                             item.variantId
                           )
                         }
@@ -124,8 +134,10 @@ export function CartDrawer({ whatsapp }: Props) {
                       >
                         −
                       </button>
-                      <span className="min-w-6 text-center text-sm font-semibold">
-                        {item.quantity}
+                      <span className="min-w-10 text-center text-sm font-semibold">
+                        {isSoldByKg(item.soldBy) || kind === "docinhos"
+                          ? formatQuantity(item.quantity, item.soldBy, kind)
+                          : item.quantity}
                       </span>
                       <button
                         type="button"
@@ -133,7 +145,7 @@ export function CartDrawer({ whatsapp }: Props) {
                         onClick={() =>
                           setQuantity(
                             item.productId,
-                            item.quantity + 1,
+                            item.quantity + step,
                             item.variantId
                           )
                         }
@@ -153,7 +165,8 @@ export function CartDrawer({ whatsapp }: Props) {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </>
           )}
         </div>

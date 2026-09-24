@@ -3,8 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Product } from "@/lib/types";
+import type { Product, SoldBy } from "@/lib/types";
 import { hasVariants } from "@/lib/product-variants";
+import {
+  formatQuantity,
+  formatRate,
+  isSoldByKg,
+  minQuantity,
+  normalizeQuantity,
+  parseSoldBy,
+} from "@/lib/sold-by";
 import { formatPrice } from "@/lib/whatsapp";
 
 interface CartItem {
@@ -13,6 +21,7 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  soldBy: SoldBy;
 }
 
 export default function OrderPage() {
@@ -50,7 +59,7 @@ export default function OrderPage() {
   }, [router]);
 
   function addToCart(product: Product) {
-    if (hasVariants(product)) {
+    if (hasVariants(product) || parseSoldBy(product.soldBy) === "kg") {
       router.push(`/produto/${product.id}`);
       return;
     }
@@ -67,6 +76,7 @@ export default function OrderPage() {
           price: product.price,
           quantity: 1,
           image: product.image,
+          soldBy: "unit",
         },
       ]);
     }
@@ -79,12 +89,13 @@ export default function OrderPage() {
   }
 
   function updateQuantity(productId: string, quantity: number) {
-    const item = cart.find((item) => item.productId === productId);
+    const item = cart.find((entry) => entry.productId === productId);
     if (item) {
-      if (quantity <= 0) {
+      const min = minQuantity(item.soldBy);
+      if (quantity < min) {
         removeFromCart(productId);
       } else {
-        item.quantity = quantity;
+        item.quantity = normalizeQuantity(quantity, item.soldBy);
         setCart([...cart]);
       }
     }
@@ -181,14 +192,17 @@ export default function OrderPage() {
                     <div className="flex items-center justify-between">
                       <span className="font-display text-lg text-caramel">
                         {hasVariants(product)
-                          ? `A partir de ${formatPrice(product.price)}`
-                          : formatPrice(product.price)}
+                          ? `A partir de ${formatRate(product.price, product.soldBy, formatPrice)}`
+                          : formatRate(product.price, product.soldBy, formatPrice)}
                       </span>
                       <button
                         onClick={() => addToCart(product)}
                         className="btn-primary !px-3 !py-1.5 text-sm"
                       >
-                        {hasVariants(product) ? "Escolher" : "Adicionar"}
+                        {hasVariants(product) ||
+                        parseSoldBy(product.soldBy) === "kg"
+                          ? "Escolher"
+                          : "Adicionar"}
                       </button>
                     </div>
                   </div>
@@ -229,20 +243,26 @@ export default function OrderPage() {
                           {item.productName}
                         </p>
                         <p className="text-mocha text-xs">
-                          {formatPrice(item.price)}
+                          {formatRate(item.price, item.soldBy, formatPrice)}
                         </p>
                       </div>
                       <input
                         type="number"
-                        min="1"
+                        min={isSoldByKg(item.soldBy) ? 0.1 : 1}
+                        step={isSoldByKg(item.soldBy) ? 0.1 : 1}
                         value={item.quantity}
                         onChange={(e) =>
                           updateQuantity(
                             item.productId,
-                            parseInt(e.target.value) || 1
+                            Number(e.target.value) || minQuantity(item.soldBy)
                           )
                         }
-                        className="w-10 px-1 py-0.5 rounded border border-cappuccino/50 text-center text-xs"
+                        className="w-14 px-1 py-0.5 rounded border border-cappuccino/50 text-center text-xs"
+                        title={
+                          isSoldByKg(item.soldBy)
+                            ? formatQuantity(item.quantity, item.soldBy)
+                            : undefined
+                        }
                       />
                       <button
                         type="button"

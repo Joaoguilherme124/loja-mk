@@ -98,8 +98,16 @@ export async function POST(request: Request) {
             productName: variantLabelText
               ? `${product.name} (${variantLabelText})`
               : product.name,
-            quantity: Math.max(1, Number(item.quantity) || 1),
+            quantity: (() => {
+              const soldBy = product.soldBy === "kg" ? "kg" : "unit";
+              const raw = Number(item.quantity);
+              if (soldBy === "kg") {
+                return Math.max(0.1, Math.round((raw || 0.1) * 10) / 10);
+              }
+              return Math.max(1, Math.round(raw || 1));
+            })(),
             price,
+            soldBy: product.soldBy === "kg" ? "kg" : "unit",
             variantId: variant?.id,
             variantLabel: variantLabelText,
           };

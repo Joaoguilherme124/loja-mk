@@ -9,6 +9,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  isSoldByKg,
+  minQuantity,
+  normalizeQuantity,
+  parseSoldBy,
+} from "@/lib/sold-by";
+import type { ProductKind, SoldBy } from "@/lib/types";
 
 export type CartItem = {
   productId: string;
@@ -17,6 +24,8 @@ export type CartItem = {
   price: number;
   image: string;
   quantity: number;
+  soldBy?: SoldBy;
+  kind?: ProductKind;
 };
 
 export type CartPromo = {
@@ -71,14 +80,24 @@ function loadState(): { items: CartItem[]; promo: CartPromo | null } {
     const parsed = JSON.parse(raw);
     const items = Array.isArray(parsed.items)
       ? parsed.items
-          .map((item: CartItem) => ({
-            productId: String(item.productId || ""),
-            variantId: item.variantId ? String(item.variantId) : undefined,
-            name: String(item.name || ""),
-            price: Number(item.price) || 0,
-            image: String(item.image || ""),
-            quantity: Math.max(1, Number(item.quantity) || 1),
-          }))
+          .map((item: CartItem) => {
+            const soldBy = parseSoldBy(item.soldBy);
+            const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+            return {
+              productId: String(item.productId || ""),
+              variantId: item.variantId ? String(item.variantId) : undefined,
+              name: String(item.name || ""),
+              price: Number(item.price) || 0,
+              image: String(item.image || ""),
+              soldBy,
+              kind,
+              quantity: normalizeQuantity(
+                Number(item.quantity) || minQuantity(soldBy, kind),
+                soldBy,
+                kind
+              ),
+            };
+          })
           .filter((item: CartItem) => item.productId && item.name)
       : [];
     const promo =
@@ -104,7 +123,7 @@ function calcDiscount(items: CartItem[], promo: CartPromo | null) {
   let comboValue = 0;
   for (const productId of promo.productIds) {
     const item = items.find((entry) => entry.productId === productId);
-    if (!item || item.quantity < 1) return 0;
+    if (!item || item.quantity < minQuantity(item.soldBy, item.kind)) return 0;
     comboValue += item.price;
   }
 
@@ -133,18 +152,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, promo, hydrated]);
 
   const addItem = useCallback(
-    (item: Omit<CartItem, "quantity">, quantity = 1) => {
-      const qty = Math.max(1, quantity);
+    (item: Omit<CartItem, "quantity">, quantity?: number) => {
+      const soldBy = parseSoldBy(item.soldBy);
+      const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+      const qty = normalizeQuantity(
+        quantity ?? minQuantity(soldBy, kind),
+        soldBy,
+        kind
+      );
       setItems((current) => {
         const existing = current.find((entry) => sameLine(entry, item));
         if (existing) {
           return current.map((entry) =>
             sameLine(entry, item)
-              ? { ...entry, quantity: entry.quantity + qty }
+              ? {
+                  ...entry,
+                  soldBy,
+                  kind,
+                  quantity: normalizeQuantity(
+                    entry.quantity + qty,
+                    soldBy,
+                    kind
+                  ),
+                }
               : entry
           );
         }
-        return [...current, { ...item, quantity: qty }];
+        return [...current, { ...item, soldBy, kind, quantity: qty }];
       });
       setIsOpen(true);
     },
@@ -164,13 +198,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const setQuantity = useCallback(
     (productId: string, quantity: number, variantId?: string) => {
-      const next = Math.max(1, quantity);
       setItems((current) =>
-        current.map((item) =>
-          sameLine(item, { productId, variantId })
-            ? { ...item, quantity: next }
-            : item
-        )
+        current.map((item) => {
+          if (!sameLine(item, { productId, variantId })) return item;
+          const soldBy = parseSoldBy(item.soldBy);
+          const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+          return {
+            ...item,
+            quantity: normalizeQuantity(quantity, soldBy, kind),
+          };
+        })
       );
     },
     []
@@ -238,7 +275,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => ({
       items,
       promo,
-      count: items.reduce((sum, item) => sum + item.quantity, 0),
+      count: items.reduce(
+        (sum, item) =>
+          sum + (isSoldByKg(item.soldBy) ? 1 : item.quantity),
+        0
+      ),
       subtotal,
       discount,
       total,

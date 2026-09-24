@@ -4,6 +4,8 @@ import Link from "next/link";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
 import { displayPrice, hasVariants } from "@/lib/product-variants";
+import { isDocinhosProduct } from "@/lib/product-kind";
+import { formatRate, parseSoldBy } from "@/lib/sold-by";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/whatsapp";
 
@@ -15,6 +17,9 @@ export function ProductCard({ product }: Props) {
   const { addItem } = useCart();
   const price = displayPrice(product);
   const withOptions = hasVariants(product);
+  const docinhos = isDocinhosProduct(product);
+  const soldBy = parseSoldBy(product.soldBy);
+  const priceLabel = formatRate(price, soldBy, formatPrice);
 
   return (
     <article className="border-b border-cappuccino/40 py-4 first:pt-0 last:border-b-0 last:pb-0">
@@ -50,18 +55,18 @@ export function ProductCard({ product }: Props) {
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-base font-semibold text-mocha md:text-lg">
-              {withOptions
-                ? `A partir de ${formatPrice(price)}`
-                : formatPrice(price)}
+              {withOptions ? `A partir de ${priceLabel}` : priceLabel}
             </p>
             <div className="flex gap-2">
               <Link
                 href={`/produto/${product.id}`}
                 className="btn-ghost !px-3 !py-2 !text-sm"
               >
-                {withOptions ? "Escolher" : "Detalhes"}
+                {withOptions || soldBy === "kg" || docinhos
+                  ? "Escolher"
+                  : "Detalhes"}
               </Link>
-              {!withOptions ? (
+              {!withOptions && !docinhos ? (
                 <button
                   type="button"
                   className="btn-primary !px-3 !py-2 !text-sm"
@@ -71,6 +76,7 @@ export function ProductCard({ product }: Props) {
                       name: product.name,
                       price: product.price,
                       image: product.image,
+                      soldBy,
                     })
                   }
                 >

@@ -1,6 +1,9 @@
 import { Pool, type QueryResultRow } from "pg";
 import { defaultStore } from "./seed";
 import { parseVariants } from "./product-variants";
+import { parseSoldBy } from "./sold-by";
+import { parseProductKind } from "./product-kind";
+import { readLocalDatabase, writeLocalDatabase } from "./local-store";
 import type {
   NewsItem,
   Order,
@@ -22,6 +25,8 @@ type ProductRow = QueryResultRow & {
   active: boolean;
   createdAt: string;
   variants?: string | null;
+  soldBy?: string | null;
+  kind?: string | null;
 };
 type OrderRow = QueryResultRow & {
   id: string;
@@ -40,6 +45,10 @@ type OrderRow = QueryResultRow & {
 };
 
 export type DatabaseData = StoreData & { users: User[]; orders: Order[] };
+
+function useLocalStore() {
+  return !process.env.DATABASE_URL;
+}
 
 let pool: Pool | undefined;
 let initialized: Promise<void> | undefined;
@@ -124,6 +133,15 @@ async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  await db.query(`
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS "soldBy" VARCHAR(16) NOT NULL DEFAULT 'unit'
+  `);
+  await db.query(`
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS kind VARCHAR(16) NOT NULL DEFAULT 'default'
+  `);
+
   const settings = await db.query('SELECT id FROM settings WHERE id = 1');
   if (settings.rowCount === 0) {
     const s = defaultStore.settings;
@@ -144,6 +162,10 @@ async function ensureDatabase(): Promise<void> {
 }
 
 export async function readDatabase(): Promise<DatabaseData> {
+  if (useLocalStore()) {
+    return readLocalDatabase();
+  }
+
   await ensureDatabase();
   const db = getPool();
   const [settingsResult, usersResult, productsResult, promotionsResult, newsResult, ordersResult] =
@@ -170,6 +192,8 @@ export async function readDatabase(): Promise<DatabaseData> {
       name: product.name,
       description: product.description,
       price: Number(product.price),
+      soldBy: parseSoldBy(product.soldBy),
+      kind: parseProductKind(product.kind),
       category: product.category,
       image: product.image,
       featured: Boolean(product.featured),
@@ -193,6 +217,11 @@ export async function readDatabase(): Promise<DatabaseData> {
 }
 
 export async function writeDatabase(data: DatabaseData): Promise<void> {
+  if (useLocalStore()) {
+    await writeLocalDatabase(data);
+    return;
+  }
+
   await ensureDatabase();
   const client = await getPool().connect();
   try {
@@ -206,8 +235,21 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
     await client.query("DELETE FROM products");
     for (const product of data.products) {
       await client.query(
-        'INSERT INTO products (id, name, description, price, category, image, featured, active, "createdAt", variants) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-        [product.id, product.name, product.description, product.price, product.category, product.image, product.featured, product.active, product.createdAt, JSON.stringify(product.variants || [])]
+        'INSERT INTO products (id, name, description, price, category, image, featured, active, "createdAt", variants, "soldBy", kind) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+        [
+          product.id,
+          product.name,
+          product.description,
+          product.price,
+          product.category,
+          product.image,
+          product.featured,
+          product.active,
+          product.createdAt,
+          JSON.stringify(product.variants || []),
+          parseSoldBy(product.soldBy),
+          parseProductKind(product.kind),
+        ]
       );
     }
     await client.query("DELETE FROM promotions");

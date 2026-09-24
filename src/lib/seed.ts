@@ -15,6 +15,8 @@ export const defaultStore: StoreData = {
       description:
         "Seleção especial com aroma suave e embalagem delicada — ideal para presentear.",
       price: 89.9,
+      soldBy: "unit",
+      kind: "default",
       image:
         "https://images.unsplash.com/photo-1511920170033-f8396924c348?w=800&q=80",
       category: "Kits",
@@ -28,6 +30,8 @@ export const defaultStore: StoreData = {
       description:
         "Vela artesanal com notas quentes de caramelo e baunilha. Queima limpa e aconchegante.",
       price: 54.0,
+      soldBy: "unit",
+      kind: "default",
       image:
         "https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&q=80",
       category: "Casa",
@@ -41,6 +45,8 @@ export const defaultStore: StoreData = {
       description:
         "Sachê aromático com fragrância intensa — perfeito para gavetas e closets.",
       price: 28.5,
+      soldBy: "unit",
+      kind: "default",
       image:
         "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
       category: "Aromas",
@@ -54,6 +60,8 @@ export const defaultStore: StoreData = {
       description:
         "Caixa com itens selecionados da temporada. Quantidade limitada.",
       price: 129.0,
+      soldBy: "unit",
+      kind: "default",
       image:
         "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800&q=80",
       category: "Kits",

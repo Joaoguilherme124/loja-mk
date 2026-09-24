@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { parseVariants, withSyncedPricing } from "@/lib/product-variants";
+import { parseSoldBy } from "@/lib/sold-by";
+import { parseProductKind } from "@/lib/product-kind";
 import { createId, readStore, writeStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
 
@@ -23,6 +25,8 @@ export async function POST(request: Request) {
     name: String(body.name || "").trim(),
     description: String(body.description || "").trim(),
     price: Number(body.price) || 0,
+    soldBy: parseSoldBy(body.soldBy),
+    kind: parseProductKind(body.kind),
     image: String(body.image || "").trim(),
     category: String(body.category || "Geral").trim(),
     featured: Boolean(body.featured),

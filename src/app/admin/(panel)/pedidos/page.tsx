@@ -2,6 +2,13 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Order, OrderStatus, Product } from "@/lib/types";
+import {
+  formatQuantity,
+  formatRate,
+  isSoldByKg,
+  normalizeQuantity,
+  parseSoldBy,
+} from "@/lib/sold-by";
 import { formatPrice } from "@/lib/whatsapp";
 import { OrdersSchedule } from "@/components/OrdersSchedule";
 
@@ -128,6 +135,11 @@ export default function AdminOrdersPage() {
         i === index ? { ...item, ...patch } : item
       ),
     }));
+  }
+
+  function minQtyForProduct(productId: string) {
+    const product = activeProducts.find((p) => p.id === productId);
+    return isSoldByKg(parseSoldBy(product?.soldBy)) ? 0.1 : 1;
   }
 
   function addItem() {
@@ -531,7 +543,10 @@ export default function AdminOrdersPage() {
               </button>
             </div>
 
-            {createForm.items.map((item, index) => (
+            {createForm.items.map((item, index) => {
+              const selected = activeProducts.find((p) => p.id === item.productId);
+              const soldBy = parseSoldBy(selected?.soldBy);
+              return (
               <div
                 key={index}
                 className="grid gap-3 rounded-xl border border-cappuccino/40 bg-white/40 p-3 md:grid-cols-[1fr_120px_auto]"
@@ -542,28 +557,36 @@ export default function AdminOrdersPage() {
                     className="field !text-sm"
                     value={item.productId}
                     onChange={(e) =>
-                      updateItem(index, { productId: e.target.value })
+                      updateItem(index, {
+                        productId: e.target.value,
+                        quantity: minQtyForProduct(e.target.value),
+                      })
                     }
                     required
                   >
                     <option value="">Selecione...</option>
                     {activeProducts.map((product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name} — {formatPrice(product.price)}
+                        {product.name} —{" "}
+                        {formatRate(product.price, product.soldBy, formatPrice)}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label className="block space-y-1 text-xs font-medium text-espresso">
-                  Qtd.
+                  {isSoldByKg(soldBy) ? "Peso (kg)" : "Qtd."}
                   <input
                     type="number"
-                    min={1}
+                    min={isSoldByKg(soldBy) ? 0.1 : 1}
+                    step={isSoldByKg(soldBy) ? 0.1 : 1}
                     className="field !text-sm"
                     value={item.quantity}
                     onChange={(e) =>
                       updateItem(index, {
-                        quantity: Math.max(1, Number(e.target.value) || 1),
+                        quantity: normalizeQuantity(
+                          Number(e.target.value),
+                          soldBy
+                        ),
                       })
                     }
                   />
@@ -579,7 +602,8 @@ export default function AdminOrdersPage() {
                   </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
 
             <p className="text-sm text-espresso/80">
               Total estimado:{" "}
@@ -852,7 +876,10 @@ export default function AdminOrdersPage() {
                                   className="flex justify-between text-xs text-espresso/80"
                                 >
                                   <span>
-                                    {item.quantity}x {item.productName}
+                                    {item.soldBy === "kg"
+                                      ? formatQuantity(item.quantity, "kg")
+                                      : `${item.quantity}x`}{" "}
+                                    {item.productName}
                                   </span>
                                   <span className="font-medium">
                                     {formatPrice(item.price * item.quantity)}
@@ -972,7 +999,11 @@ export default function AdminOrdersPage() {
             {orderToDelete.items.length > 0 ? (
               <p className="mt-3 rounded-xl bg-caramel/10 px-3 py-2 text-xs text-espresso/80">
                 {orderToDelete.items
-                  .map((item) => `${item.quantity}x ${item.productName}`)
+                  .map((item) =>
+                    item.soldBy === "kg"
+                      ? `${formatQuantity(item.quantity, "kg")} ${item.productName}`
+                      : `${item.quantity}x ${item.productName}`
+                  )
                   .join(" · ")}
               </p>
             ) : null}

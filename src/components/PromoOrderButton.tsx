@@ -31,6 +31,7 @@ export function PromoOrderButton({
         name: product.name,
         price: product.price,
         image: product.image,
+        soldBy: product.soldBy === "kg" ? "kg" : "unit",
       })),
       {
         title: promotion.title,

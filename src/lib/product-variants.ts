@@ -1,3 +1,4 @@
+import { parseProductKind } from "./product-kind";
 import type { Product, ProductVariant } from "./types";
 
 export function parseVariants(raw: unknown): ProductVariant[] {
@@ -63,11 +64,15 @@ export function hasVariants(product: Product) {
 
 export function withSyncedPricing(product: Product): Product {
   const variants = parseVariants(product.variants);
+  const soldBy = product.soldBy === "kg" ? "kg" : "unit";
+  const kind = parseProductKind(product.kind);
   if (variants.length === 0) {
-    return { ...product, variants: [] };
+    return { ...product, soldBy, kind, variants: [] };
   }
   return {
     ...product,
+    soldBy,
+    kind,
     variants,
     price: Math.min(...variants.map((variant) => variant.price)),
     image: variants[0]?.image || product.image,

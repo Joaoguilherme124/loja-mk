@@ -1,3 +1,8 @@
+export type SoldBy = "unit" | "kg";
+
+/** default = produto normal/torta; docinhos = cadastro rápido por sabor */
+export type ProductKind = "default" | "docinhos";
+
 export type ProductVariant = {
   id: string;
   size: string;
@@ -11,6 +16,9 @@ export type Product = {
   name: string;
   description: string;
   price: number;
+  /** Preço por unidade ou por kg, conforme `soldBy`. */
+  soldBy: SoldBy;
+  kind: ProductKind;
   image: string;
   category: string;
   featured: boolean;
@@ -69,6 +77,7 @@ export type OrderItem = {
   productName: string;
   quantity: number;
   price: number;
+  soldBy?: SoldBy;
   variantId?: string;
   variantLabel?: string;
 };

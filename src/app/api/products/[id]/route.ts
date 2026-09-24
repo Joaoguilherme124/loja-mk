@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { parseVariants, withSyncedPricing } from "@/lib/product-variants";
+import { parseSoldBy } from "@/lib/sold-by";
+import { parseProductKind } from "@/lib/product-kind";
 import { readStore, writeStore } from "@/lib/store";
 
 type Params = { params: Promise<{ id: string }> };
@@ -39,6 +41,12 @@ export async function PUT(request: Request, { params }: Params) {
     name: String(body.name ?? current.name).trim(),
     description: String(body.description ?? current.description).trim(),
     price: Number(body.price ?? current.price),
+    soldBy: parseSoldBy(
+      body.soldBy !== undefined ? body.soldBy : current.soldBy
+    ),
+    kind: parseProductKind(
+      body.kind !== undefined ? body.kind : current.kind
+    ),
     image: String(body.image ?? current.image).trim(),
     category: String(body.category ?? current.category).trim(),
     featured: Boolean(body.featured),

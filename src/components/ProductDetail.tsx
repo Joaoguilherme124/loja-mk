@@ -10,6 +10,16 @@ import {
   uniqueStyles,
   variantLabel,
 } from "@/lib/product-variants";
+import { isDocinhosProduct } from "@/lib/product-kind";
+import {
+  formatQuantity,
+  formatRate,
+  isSoldByKg,
+  minQuantity,
+  normalizeQuantity,
+  parseSoldBy,
+  quantityStep,
+} from "@/lib/sold-by";
 import { buildWhatsAppLink, formatPrice } from "@/lib/whatsapp";
 import type { Product } from "@/lib/types";
 
@@ -20,11 +30,16 @@ type Props = {
 
 export function ProductDetail({ product, whatsapp }: Props) {
   const variantsEnabled = hasVariants(product);
+  const docinhos = isDocinhosProduct(product);
+  const kind = docinhos ? "docinhos" : product.kind;
+  const soldBy = parseSoldBy(product.soldBy);
+  const byKg = isSoldByKg(soldBy);
+  const step = quantityStep(soldBy, kind);
   const sizes = uniqueSizes(product);
   const styles = uniqueStyles(product);
   const [size, setSize] = useState(sizes[0] || "");
   const [style, setStyle] = useState(styles[0] || "");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(minQuantity(soldBy, kind));
   const { addItem } = useCart();
 
   const selectedVariant = useMemo(() => {
@@ -35,22 +50,25 @@ export function ProductDetail({ product, whatsapp }: Props) {
   const unitPrice = selectedVariant?.price ?? product.price;
   const image = selectedVariant?.image ?? product.image;
   const displayName = selectedVariant
-    ? `${product.name} (${variantLabel(selectedVariant)})`
+    ? docinhos
+      ? `${product.name} (${selectedVariant.style})`
+      : `${product.name} (${variantLabel(selectedVariant)})`
     : product.name;
 
   const availableStylesForSize = useMemo(() => {
     if (!variantsEnabled) return styles;
+    if (docinhos) return styles;
     return styles.filter((entry) => findVariant(product, size, entry));
-  }, [variantsEnabled, styles, product, size]);
+  }, [variantsEnabled, styles, product, size, docinhos]);
 
   const link = useMemo(
     () =>
       buildWhatsAppLink(
         whatsapp,
-        { name: displayName, price: unitPrice },
+        { name: displayName, price: unitPrice, soldBy },
         quantity
       ),
-    [whatsapp, displayName, unitPrice, quantity]
+    [whatsapp, displayName, unitPrice, soldBy, quantity]
   );
 
   function selectSize(nextSize: string) {
@@ -61,6 +79,20 @@ export function ProductDetail({ product, whatsapp }: Props) {
     if (!nextStyles.includes(style)) {
       setStyle(nextStyles[0] || "");
     }
+  }
+
+  function selectFlavor(nextStyle: string) {
+    setStyle(nextStyle);
+    if (docinhos) {
+      const match = (product.variants || []).find(
+        (variant) => variant.style === nextStyle
+      );
+      if (match) setSize(match.size);
+    }
+  }
+
+  function bumpQuantity(delta: number) {
+    setQuantity((q) => normalizeQuantity(q + delta, soldBy, kind));
   }
 
   return (
@@ -91,35 +123,45 @@ export function ProductDetail({ product, whatsapp }: Props) {
 
         <div className="space-y-5 rounded-[1.5rem] border border-cappuccino/60 bg-foam/70 p-5 shadow-[0_16px_40px_rgba(59,42,34,0.08)] backdrop-blur-sm md:p-6">
           <div>
-            <p className="text-sm text-mocha">Valor unitário</p>
+            <p className="text-sm text-mocha">
+              {byKg
+                ? "Valor por kg"
+                : docinhos
+                  ? "Valor por unidade"
+                  : "Valor unitário"}
+            </p>
             <p className="font-display text-3xl text-espresso">
-              {formatPrice(unitPrice)}
+              {formatRate(unitPrice, soldBy, formatPrice)}
             </p>
           </div>
 
           {variantsEnabled ? (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-espresso">Tamanho</p>
-                <div className="flex flex-wrap gap-2">
-                  {sizes.map((entry) => (
-                    <button
-                      key={entry}
-                      type="button"
-                      className={`rounded-full border px-4 py-2 text-sm ${
-                        size === entry
-                          ? "border-mocha bg-mocha text-foam"
-                          : "border-cappuccino bg-white/70 text-espresso"
-                      }`}
-                      onClick={() => selectSize(entry)}
-                    >
-                      {entry}
-                    </button>
-                  ))}
+              {!docinhos ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-espresso">Tamanho</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sizes.map((entry) => (
+                      <button
+                        key={entry}
+                        type="button"
+                        className={`rounded-full border px-4 py-2 text-sm ${
+                          size === entry
+                            ? "border-mocha bg-mocha text-foam"
+                            : "border-cappuccino bg-white/70 text-espresso"
+                        }`}
+                        onClick={() => selectSize(entry)}
+                      >
+                        {entry}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : null}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-espresso">Estilo</p>
+                <p className="text-sm font-medium text-espresso">
+                  {docinhos ? "Sabor" : "Estilo"}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {availableStylesForSize.map((entry) => (
                     <button
@@ -130,7 +172,9 @@ export function ProductDetail({ product, whatsapp }: Props) {
                           ? "border-mocha bg-mocha text-foam"
                           : "border-cappuccino bg-white/70 text-espresso"
                       }`}
-                      onClick={() => setStyle(entry)}
+                      onClick={() =>
+                        docinhos ? selectFlavor(entry) : setStyle(entry)
+                      }
                     >
                       {entry}
                     </button>
@@ -141,32 +185,56 @@ export function ProductDetail({ product, whatsapp }: Props) {
           ) : null}
 
           <label className="block space-y-2 text-sm font-medium text-espresso">
-            Quantidade
+            {byKg ? "Peso (kg)" : docinhos ? "Quantidade (mín. 25)" : "Quantidade"}
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 className="h-10 w-10 rounded-full border border-cappuccino bg-white/70 text-lg"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                onClick={() => bumpQuantity(-step)}
                 aria-label="Diminuir"
               >
                 −
               </button>
-              <span className="min-w-8 text-center text-lg font-semibold">
-                {quantity}
-              </span>
+              {byKg ? (
+                <input
+                  className="field !w-24 !text-center !text-lg !font-semibold"
+                  type="number"
+                  min={0.1}
+                  step={0.1}
+                  value={quantity}
+                  onChange={(e) =>
+                    setQuantity(
+                      normalizeQuantity(
+                        Number(e.target.value) || 0.1,
+                        soldBy,
+                        kind
+                      )
+                    )
+                  }
+                />
+              ) : (
+                <span className="min-w-8 text-center text-lg font-semibold">
+                  {quantity}
+                </span>
+              )}
               <button
                 type="button"
                 className="h-10 w-10 rounded-full border border-cappuccino bg-white/70 text-lg"
-                onClick={() => setQuantity((q) => q + 1)}
+                onClick={() => bumpQuantity(step)}
                 aria-label="Aumentar"
               >
                 +
               </button>
             </div>
+            {docinhos ? (
+              <p className="text-xs font-normal text-espresso/60">
+                Pedido mínimo de 25 unidades, de 5 em 5.
+              </p>
+            ) : null}
           </label>
 
           <p className="text-sm text-espresso/70">
-            Total estimado:{" "}
+            Total estimado ({formatQuantity(quantity, soldBy, kind)}):{" "}
             <strong className="text-espresso">
               {formatPrice(unitPrice * quantity)}
             </strong>
@@ -184,6 +252,8 @@ export function ProductDetail({ product, whatsapp }: Props) {
                   name: displayName,
                   price: unitPrice,
                   image,
+                  soldBy,
+                  kind: docinhos ? "docinhos" : undefined,
                 },
                 quantity
               )

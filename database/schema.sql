@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS products (
   name VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
   price DECIMAL(10,2) NOT NULL,
+  soldBy VARCHAR(16) NOT NULL DEFAULT 'unit',
+  kind VARCHAR(16) NOT NULL DEFAULT 'default',
   category VARCHAR(100) NOT NULL,
   image TEXT NOT NULL,
   stock INT NOT NULL DEFAULT 0,
