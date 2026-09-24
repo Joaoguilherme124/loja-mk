@@ -10,7 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  isSoldByKg,
   minQuantity,
   normalizeQuantity,
   parseSoldBy,
@@ -275,11 +274,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => ({
       items,
       promo,
-      count: items.reduce(
-        (sum, item) =>
-          sum + (isSoldByKg(item.soldBy) ? 1 : item.quantity),
-        0
-      ),
+      count: items.length,
       subtotal,
       discount,
       total,

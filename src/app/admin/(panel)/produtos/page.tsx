@@ -128,23 +128,17 @@ export default function AdminProductsPage() {
   }
 
   function setKind(kind: ProductKind) {
-    setForm((current) => ({
-      ...current,
+    setEditingId(null);
+    setMessage("");
+    setForm({
+      ...emptyForm,
       kind,
-      soldBy: kind === "docinhos" ? "unit" : current.soldBy,
-      category:
-        kind === "docinhos" && current.category === "Geral"
-          ? "Docinhos"
-          : current.category,
-      variants: kind === "docinhos" ? [] : current.variants,
-      flavors:
-        kind === "docinhos"
-          ? current.flavors.length > 0
-            ? current.flavors
-            : [emptyFlavor()]
-          : [],
-      price: kind === "docinhos" ? "" : current.price,
-    }));
+      soldBy: "unit",
+      category: kind === "docinhos" ? "Docinhos" : "Geral",
+      flavors: kind === "docinhos" ? [emptyFlavor()] : [],
+      variants: [],
+      price: "",
+    });
   }
 
   function updateVariant(id: string, patch: Partial<VariantForm>) {
