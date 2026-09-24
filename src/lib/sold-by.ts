@@ -17,7 +17,7 @@ export function minQuantity(
   kind?: ProductKind | null
 ) {
   if (isDocinhosKind(kind)) return 25;
-  return isSoldByKg(soldBy) ? 0.1 : 1;
+  return 1;
 }
 
 export function quantityStep(
@@ -25,10 +25,10 @@ export function quantityStep(
   kind?: ProductKind | null
 ) {
   if (isDocinhosKind(kind)) return 5;
-  return isSoldByKg(soldBy) ? 0.1 : 1;
+  return isSoldByKg(soldBy) ? 0.5 : 1;
 }
 
-/** Arredonda kg em 1 casa; docinhos de 5 em 5 (mín. 25); demais em inteiro. */
+/** Docinhos de 5 em 5 (mín. 25); kg de 0,5 em 0,5 (mín. 1); demais em inteiro. */
 export function normalizeQuantity(
   value: number,
   soldBy?: SoldBy | null,
@@ -42,7 +42,8 @@ export function normalizeQuantity(
   }
   if (!Number.isFinite(raw)) return minQuantity(soldBy, kind);
   if (isSoldByKg(soldBy)) {
-    return Math.max(0.1, Math.round(raw * 10) / 10);
+    const stepped = Math.round(raw * 2) / 2;
+    return Math.max(1, stepped);
   }
   return Math.max(1, Math.round(raw));
 }

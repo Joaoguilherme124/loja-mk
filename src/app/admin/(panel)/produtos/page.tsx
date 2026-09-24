@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ImageUploader } from "@/components/ImageUploader";
 import {
   flavorsFromVariants,
@@ -82,6 +82,7 @@ export default function AdminProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   async function load() {
     const res = await fetch("/api/products");
@@ -115,6 +116,9 @@ export default function AdminProductsPage() {
             ? toFlavorForms(product.variants)
             : [emptyFlavor()]
           : [],
+    });
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -281,8 +285,9 @@ export default function AdminProductsPage() {
       </div>
 
       <form
+        ref={formRef}
         onSubmit={onSubmit}
-        className="space-y-4 rounded-[1.4rem] border border-cappuccino/50 bg-foam/75 p-5 md:p-6"
+        className="space-y-4 rounded-[1.4rem] border border-cappuccino/50 bg-foam/75 p-5 md:p-6 scroll-mt-6"
       >
         <h2 className="font-display text-2xl text-espresso">
           {editingId ? "Editar produto" : "Novo produto"}

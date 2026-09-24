@@ -60,9 +60,6 @@ export default function AdminLoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        <p className="mt-6 text-xs text-espresso/55">
-          Senha padrão de desenvolvimento: <strong>mk1234</strong>
-        </p>
       </div>
     </div>
   );

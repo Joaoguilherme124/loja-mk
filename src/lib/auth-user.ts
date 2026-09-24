@@ -52,40 +52,6 @@ async function isValidToken(token: string | undefined): Promise<boolean> {
   return mismatch === 0;
 }
 
-export async function registerUser(
-  email: string,
-  name: string,
-  password: string,
-  role: UserRole = "cliente"
-): Promise<{ success: boolean; error?: string; user?: User }> {
-  try {
-    const store = await readDatabase();
-
-    if (store.users.some((u) => u.email === email)) {
-      return { success: false, error: "Email já cadastrado" };
-    }
-
-    const passwordHash = await hashPassword(password);
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      email,
-      name,
-      passwordHash,
-      role,
-      active: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    store.users.push(newUser);
-    await writeDatabase(store);
-
-    return { success: true, user: newUser };
-  } catch (error) {
-    console.error("Erro ao registrar usuário:", error);
-    return { success: false, error: "Erro ao cadastrar usuário" };
-  }
-}
-
 export async function loginUser(
   email: string,
   password: string

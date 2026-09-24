@@ -185,7 +185,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
           ) : null}
 
           <label className="block space-y-2 text-sm font-medium text-espresso">
-            {byKg ? "Peso (kg)" : docinhos ? "Quantidade (mín. 25)" : "Quantidade"}
+            {byKg ? "Peso (kg) — mín. 1" : docinhos ? "Quantidade (mín. 25)" : "Quantidade"}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -199,13 +199,13 @@ export function ProductDetail({ product, whatsapp }: Props) {
                 <input
                   className="field !w-24 !text-center !text-lg !font-semibold"
                   type="number"
-                  min={0.1}
-                  step={0.1}
+                  min={1}
+                  step={0.5}
                   value={quantity}
                   onChange={(e) =>
                     setQuantity(
                       normalizeQuantity(
-                        Number(e.target.value) || 0.1,
+                        Number(e.target.value) || 1,
                         soldBy,
                         kind
                       )
@@ -229,6 +229,11 @@ export function ProductDetail({ product, whatsapp }: Props) {
             {docinhos ? (
               <p className="text-xs font-normal text-espresso/60">
                 Pedido mínimo de 25 unidades, de 5 em 5.
+              </p>
+            ) : null}
+            {byKg ? (
+              <p className="text-xs font-normal text-espresso/60">
+                Pedido mínimo de 1 kg, de 0,5 em 0,5 kg.
               </p>
             ) : null}
           </label>

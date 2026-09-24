@@ -6,6 +6,7 @@ import {
   formatQuantity,
   formatRate,
   isSoldByKg,
+  minQuantity,
   normalizeQuantity,
   parseSoldBy,
 } from "@/lib/sold-by";
@@ -139,7 +140,10 @@ export default function AdminOrdersPage() {
 
   function minQtyForProduct(productId: string) {
     const product = activeProducts.find((p) => p.id === productId);
-    return isSoldByKg(parseSoldBy(product?.soldBy)) ? 0.1 : 1;
+    return minQuantity(
+      parseSoldBy(product?.soldBy),
+      product?.kind === "docinhos" ? "docinhos" : undefined
+    );
   }
 
   function addItem() {
@@ -577,8 +581,8 @@ export default function AdminOrdersPage() {
                   {isSoldByKg(soldBy) ? "Peso (kg)" : "Qtd."}
                   <input
                     type="number"
-                    min={isSoldByKg(soldBy) ? 0.1 : 1}
-                    step={isSoldByKg(soldBy) ? 0.1 : 1}
+                    min={1}
+                    step={isSoldByKg(soldBy) ? 0.5 : 1}
                     className="field !text-sm"
                     value={item.quantity}
                     onChange={(e) =>

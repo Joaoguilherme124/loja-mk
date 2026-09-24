@@ -102,7 +102,7 @@ export async function POST(request: Request) {
               const soldBy = product.soldBy === "kg" ? "kg" : "unit";
               const raw = Number(item.quantity);
               if (soldBy === "kg") {
-                return Math.max(0.1, Math.round((raw || 0.1) * 10) / 10);
+                return Math.max(1, Math.round((raw || 1) * 2) / 2);
               }
               return Math.max(1, Math.round(raw || 1));
             })(),

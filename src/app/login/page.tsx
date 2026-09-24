@@ -89,13 +89,6 @@ export default function LoginPage() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-sm text-espresso/70">
-          Não tem conta?{" "}
-          <Link href="/register" className="font-semibold text-espresso hover:underline">
-            Cadastre-se aqui
-          </Link>
-        </p>
       </div>
     </div>
   );

@@ -248,8 +248,8 @@ export default function OrderPage() {
                       </div>
                       <input
                         type="number"
-                        min={isSoldByKg(item.soldBy) ? 0.1 : 1}
-                        step={isSoldByKg(item.soldBy) ? 0.1 : 1}
+                        min={1}
+                        step={isSoldByKg(item.soldBy) ? 0.5 : 1}
                         value={item.quantity}
                         onChange={(e) =>
                           updateQuantity(

@@ -53,12 +53,6 @@ export function UserMenu() {
         >
           Entrar
         </Link>
-        <Link
-          href="/register"
-          className="rounded-full bg-foam/95 px-4 py-2 font-semibold text-espresso shadow-sm transition hover:bg-white"
-        >
-          Cadastro
-        </Link>
       </div>
     );
   }
