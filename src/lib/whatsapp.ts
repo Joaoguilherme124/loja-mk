@@ -50,7 +50,8 @@ export function buildCartWhatsAppLink(
     discountAmount: number;
     subtotal: number;
     total: number;
-  }
+  },
+  pickupDate?: string
 ) {
   const digits = phone.replace(/\D/g, "");
   const lines = items.map((item) => {
@@ -70,9 +71,19 @@ export function buildCartWhatsAppLink(
     totalsBlock = `Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\n*Total estimado:* ${formatPrice(promo.total)}`;
   }
 
+  const pickupBlock = pickupDate?.trim()
+    ? `\n\n*Retirada:* ${formatPickupDate(pickupDate.trim())}`
+    : "";
   const noteBlock = note?.trim() ? `\n\nObs: ${note.trim()}` : "";
-  const message = `Olá! Quero fazer este pedido:\n\n${lines.join("\n")}\n\n${totalsBlock}${noteBlock}\n\nPode confirmar?`;
+  const message = `Olá! Quero fazer este pedido:\n\n${lines.join("\n")}\n\n${totalsBlock}${pickupBlock}${noteBlock}\n\nPode confirmar?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
+/** Formata YYYY-MM-DD para dd/mm/aaaa. */
+export function formatPickupDate(isoDate: string) {
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return isoDate;
+  return `${match[3]}/${match[2]}/${match[1]}`;
 }
 
 export function buildPromotionWhatsAppLink(

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
 import {
@@ -14,6 +15,34 @@ type Props = {
   whatsapp: string;
 };
 
+function todayIsoDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** 0=domingo … 6=sábado. Retirada: terça (2) a sábado (6). */
+function weekdayFromIso(isoDate: string) {
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return -1;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return new Date(year, month - 1, day).getDay();
+}
+
+function isAllowedPickupDate(isoDate: string) {
+  const weekday = weekdayFromIso(isoDate);
+  return weekday >= 2 && weekday <= 6;
+}
+
+const PICKUP_DATE_HINT =
+  "Retiradas de terça a sábado (domingo e segunda não disponíveis).";
+const PICKUP_DATE_BLOCKED =
+  "Escolha um dia de terça a sábado. Domingo e segunda não estão disponíveis.";
+
 export function CartDrawer({ whatsapp }: Props) {
   const {
     items,
@@ -27,31 +56,49 @@ export function CartDrawer({ whatsapp }: Props) {
     setQuantity,
     clearCart,
   } = useCart();
+  const [pickupDate, setPickupDate] = useState("");
+  const [dateError, setDateError] = useState("");
+
+  const minDate = useMemo(() => todayIsoDate(), []);
 
   if (!isOpen) return null;
 
-  const orderLink =
-    items.length > 0
-      ? buildCartWhatsAppLink(
-          whatsapp,
-          items.map((item) => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            soldBy: item.soldBy,
-          })),
-          undefined,
-          promo && discount > 0
-            ? {
-                title: promo.title,
-                discountLabel: promo.discountLabel,
-                discountAmount: discount,
-                subtotal,
-                total,
-              }
-            : undefined
-        )
-      : "#";
+  const promoPayload =
+    promo && discount > 0
+      ? {
+          title: promo.title,
+          discountLabel: promo.discountLabel,
+          discountAmount: discount,
+          subtotal,
+          total,
+        }
+      : undefined;
+
+  function openWhatsApp() {
+    if (!pickupDate) {
+      setDateError("Escolha o dia de retirada");
+      return;
+    }
+    if (!isAllowedPickupDate(pickupDate)) {
+      setDateError(PICKUP_DATE_BLOCKED);
+      return;
+    }
+    setDateError("");
+    const link = buildCartWhatsAppLink(
+      whatsapp,
+      items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        soldBy: item.soldBy,
+      })),
+      undefined,
+      promoPayload,
+      pickupDate
+    );
+    window.open(link, "_blank", "noopener,noreferrer");
+    closeCart();
+  }
 
   return (
     <div className="fixed inset-0 z-[60]">
@@ -99,73 +146,73 @@ export function CartDrawer({ whatsapp }: Props) {
                 const kind = item.kind === "docinhos" ? "docinhos" : undefined;
                 const step = quantityStep(item.soldBy, kind);
                 return (
-                <div
-                  key={`${item.productId}:${item.variantId || ""}`}
-                  className="flex gap-3 rounded-2xl border border-cappuccino/40 bg-white/50 p-3"
-                >
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-cappuccino/30">
-                    <SafeImage
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-espresso">
-                      {item.name}
-                    </p>
-                    <p className="text-sm text-mocha">
-                      {formatRate(item.price, item.soldBy, formatPrice)}
-                    </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="h-8 w-8 rounded-full border border-cappuccino bg-white/80"
-                        onClick={() =>
-                          setQuantity(
-                            item.productId,
-                            item.quantity - step,
-                            item.variantId
-                          )
-                        }
-                        aria-label="Diminuir"
-                      >
-                        −
-                      </button>
-                      <span className="min-w-10 text-center text-sm font-semibold">
-                        {isSoldByKg(item.soldBy) || kind === "docinhos"
-                          ? formatQuantity(item.quantity, item.soldBy, kind)
-                          : item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        className="h-8 w-8 rounded-full border border-cappuccino bg-white/80"
-                        onClick={() =>
-                          setQuantity(
-                            item.productId,
-                            item.quantity + step,
-                            item.variantId
-                          )
-                        }
-                        aria-label="Aumentar"
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className="ml-auto text-xs font-semibold text-red-800"
-                        onClick={() =>
-                          removeItem(item.productId, item.variantId)
-                        }
-                      >
-                        Remover
-                      </button>
+                  <div
+                    key={`${item.productId}:${item.variantId || ""}`}
+                    className="flex gap-3 rounded-2xl border border-cappuccino/40 bg-white/50 p-3"
+                  >
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-cappuccino/30">
+                      <SafeImage
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-espresso">
+                        {item.name}
+                      </p>
+                      <p className="text-sm text-mocha">
+                        {formatRate(item.price, item.soldBy, formatPrice)}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="h-8 w-8 rounded-full border border-cappuccino bg-white/80"
+                          onClick={() =>
+                            setQuantity(
+                              item.productId,
+                              item.quantity - step,
+                              item.variantId
+                            )
+                          }
+                          aria-label="Diminuir"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-10 text-center text-sm font-semibold">
+                          {isSoldByKg(item.soldBy) || kind === "docinhos"
+                            ? formatQuantity(item.quantity, item.soldBy, kind)
+                            : item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          className="h-8 w-8 rounded-full border border-cappuccino bg-white/80"
+                          onClick={() =>
+                            setQuantity(
+                              item.productId,
+                              item.quantity + step,
+                              item.variantId
+                            )
+                          }
+                          aria-label="Aumentar"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-auto text-xs font-semibold text-red-800"
+                          onClick={() =>
+                            removeItem(item.productId, item.variantId)
+                          }
+                        >
+                          Remover
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
+                );
               })}
             </>
           )}
@@ -192,15 +239,44 @@ export function CartDrawer({ whatsapp }: Props) {
           </div>
           {items.length > 0 ? (
             <>
-              <a
-                href={orderLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <label className="block space-y-2 text-sm font-medium text-espresso">
+                Dia de retirada
+                <input
+                  type="date"
+                  className="field"
+                  min={minDate}
+                  value={pickupDate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) {
+                      setPickupDate("");
+                      setDateError("");
+                      return;
+                    }
+                    if (!isAllowedPickupDate(value)) {
+                      setPickupDate("");
+                      setDateError(PICKUP_DATE_BLOCKED);
+                      return;
+                    }
+                    setPickupDate(value);
+                    setDateError("");
+                  }}
+                  required
+                />
+                <span className="block text-xs font-normal text-espresso/60">
+                  {PICKUP_DATE_HINT}
+                </span>
+              </label>
+              {dateError ? (
+                <p className="text-sm text-red-800">{dateError}</p>
+              ) : null}
+              <button
+                type="button"
                 className="btn-primary w-full"
-                onClick={closeCart}
+                onClick={openWhatsApp}
               >
                 Pedir no WhatsApp
-              </a>
+              </button>
               <button
                 type="button"
                 className="btn-ghost w-full !text-sm"
