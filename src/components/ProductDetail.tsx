@@ -22,7 +22,6 @@ import {
   TORTA_CHOCOLATE_EXTRA_PER_KG,
   TORTA_MAX_FLAVORS,
   TORTA_SIZES,
-  tortaSizeLabel,
   type TortaFlavorOption,
   type TortaMassa,
   type TortaSizeOption,
@@ -54,7 +53,6 @@ function TortaDetail({ product, whatsapp }: Props) {
   const { addItem } = useCart();
 
   const ratePerKg = resolveTortaRatePerKg(rates, selected);
-  const usingSpecial = selected.some((flavor) => flavor.tier === "especial");
   const unitPrice = calcTortaTotal({
     kg: size.kg,
     ratePerKg,
@@ -157,14 +155,11 @@ function TortaDetail({ product, whatsapp }: Props) {
             <p className="font-display text-3xl text-espresso">
               {formatPrice(unitPrice)}
             </p>
-            <p className="mt-1 text-xs text-espresso/60">
-              {formatPrice(ratePerKg)}/kg
-              {usingSpecial ? " (especial)" : " (tradicional)"}
-              {massa === "chocolate"
-                ? ` + ${formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg massa chocolate`
-                : ""}{" "}
-              · {size.kg.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}{" "}
-              kg
+            <p className="mt-3 text-sm leading-relaxed text-espresso/70">
+              O valor final da torta dependerá da decoração escolhida. Ao
+              finalizar a escolha do sabor, kg e massa, aperte em{" "}
+              <strong className="text-espresso">“Pedir no WhatsApp”</strong> e
+              envie a referência da decoração da torta.
             </p>
           </div>
 
@@ -194,7 +189,6 @@ function TortaDetail({ product, whatsapp }: Props) {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-espresso/60">{tortaSizeLabel(size)}</p>
           </div>
 
           <div className="space-y-2">
@@ -236,7 +230,7 @@ function TortaDetail({ product, whatsapp }: Props) {
             )}
             {renderFlavorGroup(
               "Especiais",
-              `${formatPrice(rates.special)}/kg — se escolher algum, a torta usa este valor`,
+              `${formatPrice(rates.special)}/kg`,
               groups.special
             )}
             {selected.length === 0 ? (
@@ -274,13 +268,6 @@ function TortaDetail({ product, whatsapp }: Props) {
               </button>
             </div>
           </label>
-
-          <p className="text-sm text-espresso/70">
-            Total estimado:{" "}
-            <strong className="text-espresso">
-              {formatPrice(unitPrice * quantity)}
-            </strong>
-          </p>
 
           <button
             type="button"

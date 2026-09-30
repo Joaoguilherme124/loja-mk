@@ -13,6 +13,37 @@ type Props = {
   priority?: boolean;
 };
 
+function Placeholder({
+  alt,
+  fill,
+  width,
+  height,
+  className,
+}: Omit<Props, "src" | "sizes" | "priority">) {
+  if (fill) {
+    return (
+      <div
+        role="img"
+        aria-label={alt || "Sem foto"}
+        className={`absolute inset-0 flex items-center justify-center bg-cappuccino/35 text-xs uppercase tracking-[0.14em] text-espresso/45 ${className || ""}`}
+      >
+        Sem foto
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="img"
+      aria-label={alt || "Sem foto"}
+      style={{ width, height }}
+      className={`flex items-center justify-center bg-cappuccino/35 text-xs uppercase tracking-[0.14em] text-espresso/45 ${className || ""}`}
+    >
+      Sem foto
+    </div>
+  );
+}
+
 export function SafeImage({
   src,
   alt,
@@ -23,6 +54,18 @@ export function SafeImage({
   sizes,
   priority,
 }: Props) {
+  if (!src?.trim()) {
+    return (
+      <Placeholder
+        alt={alt}
+        fill={fill}
+        width={width}
+        height={height}
+        className={className}
+      />
+    );
+  }
+
   const isLocal = src.startsWith("/");
   const isKnownRemote = src.includes("images.unsplash.com");
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { StoreInfoSection } from "@/components/StoreInfoSection";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +27,10 @@ export default async function CatalogPage() {
             Catálogo
           </h1>
           <p className="mt-3 max-w-xl text-foam/80">
-            Adicione quantos itens quiser ao pedido e envie tudo de uma vez no
-            WhatsApp.
+            Adicione todos os produtos desejados ao seu pedido e envie a
+            seleção completa pelo WhatsApp.
           </p>
+          <StoreInfoSection variant="hero" />
         </div>
       </div>
 

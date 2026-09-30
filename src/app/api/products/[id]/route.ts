@@ -58,9 +58,9 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
   }
 
-  if (variants.length === 0 && !product.image) {
+  if (variants.length === 0 && product.price <= 0) {
     return NextResponse.json(
-      { error: "Imagem é obrigatória (ou adicione variações)" },
+      { error: "Preço é obrigatório" },
       { status: 400 }
     );
   }

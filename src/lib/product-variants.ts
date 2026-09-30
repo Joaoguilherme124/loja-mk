@@ -20,7 +20,7 @@ export function parseVariants(raw: unknown): ProductVariant[] {
       const image = String(item?.image || "").trim();
       const price = Number(item?.price) || 0;
       const id = String(item?.id || `var_${index}`).trim();
-      if (!size || !style || !image || price <= 0) return null;
+      if (!size || !style || price <= 0) return null;
       return { id, size, style, price, image } satisfies ProductVariant;
     })
     .filter(Boolean) as ProductVariant[];

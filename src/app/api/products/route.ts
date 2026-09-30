@@ -39,16 +39,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
   }
 
-  if (variants.length === 0 && (!product.image || product.price <= 0)) {
+  if (variants.length === 0 && product.price <= 0) {
     return NextResponse.json(
-      { error: "Nome, imagem e preço são obrigatórios" },
-      { status: 400 }
-    );
-  }
-
-  if (variants.length > 0 && !product.image) {
-    return NextResponse.json(
-      { error: "Cada variação precisa de foto" },
+      { error: "Nome e preço são obrigatórios" },
       { status: 400 }
     );
   }

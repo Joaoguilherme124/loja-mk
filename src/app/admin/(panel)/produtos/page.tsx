@@ -261,9 +261,6 @@ export default function AdminProductsPage() {
         const traditionalPrice = Number(form.tortaPriceTraditional) || 0;
         const specialPrice = Number(form.tortaPriceSpecial) || 0;
 
-        if (!cover) {
-          throw new Error("Adicione a foto de capa da torta");
-        }
         if (traditionalPrice <= 0 || specialPrice <= 0) {
           throw new Error(
             "Informe o preço por kg tradicional e o preço por kg especial"
@@ -306,15 +303,13 @@ export default function AdminProductsPage() {
         }));
 
         const named = flavors.filter((flavor) => flavor.name);
-        const valid = named.filter((flavor) => flavor.price > 0 && flavor.image);
+        const valid = named.filter((flavor) => flavor.price > 0);
 
         if (named.length === 0) {
           throw new Error("Adicione pelo menos um sabor");
         }
         if (valid.length !== named.length) {
-          throw new Error(
-            "Cada sabor precisa de preço e foto (ou uma foto de capa para todos)"
-          );
+          throw new Error("Cada sabor precisa de preço");
         }
 
         variants = variantsFromFlavors(valid, cover);
@@ -330,13 +325,12 @@ export default function AdminProductsPage() {
             image: variant.image.trim(),
           }))
           .filter(
-            (variant) =>
-              variant.size && variant.style && variant.image && variant.price > 0
+            (variant) => variant.size && variant.style && variant.price > 0
           );
 
         if (form.variants.length > 0 && variants.length !== form.variants.length) {
           throw new Error(
-            "Preencha tamanho, estilo, preço e foto em todas as variações"
+            "Preencha tamanho, estilo e preço em todas as variações"
           );
         }
       }
@@ -670,7 +664,7 @@ export default function AdminProductsPage() {
           <div className="space-y-2">
             {isDocinhos || isTortas ? (
               <p className="text-sm font-medium text-espresso">
-                {isTortas ? "Foto de capa" : "Foto de capa (opcional)"}
+                Foto de capa (opcional)
               </p>
             ) : null}
             <ImageUploader
@@ -679,12 +673,12 @@ export default function AdminProductsPage() {
             />
             {isDocinhos ? (
               <p className="text-xs text-espresso/60">
-                Usada no catálogo. Se um sabor não tiver foto própria, usa esta.
+                Opcional. Se um sabor não tiver foto própria, usa esta.
               </p>
             ) : null}
             {isTortas ? (
               <p className="text-xs text-espresso/60">
-                Usada no catálogo e no pedido (os sabores não precisam de foto).
+                Opcional. Sem foto, o catálogo mostra um espaço reservado.
               </p>
             ) : null}
           </div>
@@ -711,7 +705,7 @@ export default function AdminProductsPage() {
               <div>
                 <h3 className="font-display text-xl text-espresso">Sabores</h3>
                 <p className="text-sm text-espresso/65">
-                  Nome, preço e foto de cada sabor.
+                  Nome e preço de cada sabor. Foto opcional.
                 </p>
               </div>
               <button
@@ -920,12 +914,18 @@ export default function AdminProductsPage() {
               key={product.id}
               className="flex flex-col gap-4 rounded-[1.2rem] border border-cappuccino/50 bg-foam/70 p-4 sm:flex-row sm:items-center"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={product.image}
-                alt={product.name}
-                className="h-24 w-full rounded-xl object-cover sm:h-20 sm:w-20"
-              />
+              {product.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-24 w-full rounded-xl object-cover sm:h-20 sm:w-20"
+                />
+              ) : (
+                <div className="flex h-24 w-full items-center justify-center rounded-xl bg-cappuccino/35 text-[11px] uppercase tracking-[0.14em] text-espresso/45 sm:h-20 sm:w-20">
+                  Sem foto
+                </div>
+              )}
               <div className="flex-1">
                 <p className="font-semibold text-espresso">{product.name}</p>
                 <p className="text-sm text-espresso/65">

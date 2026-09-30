@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
 import { ProductCard } from "@/components/ProductCard";
 import { PromoOrderButton } from "@/components/PromoOrderButton";
 import { SafeImage } from "@/components/SafeImage";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
+import { StoreInfoSection } from "@/components/StoreInfoSection";
 import { readStore } from "@/lib/store";
 import { buildGeneralWhatsAppLink } from "@/lib/whatsapp";
 
@@ -166,6 +167,8 @@ export default async function HomePage() {
             </div>
           </section>
         ) : null}
+
+        <StoreInfoSection />
       </main>
       <SiteFooter storeName={store.settings.storeName} />
     </div>

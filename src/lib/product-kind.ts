@@ -218,7 +218,7 @@ export function variantsFromFlavors(
       price: flavor.price,
       image: (flavor.image || fallbackImage).trim(),
     }))
-    .filter((variant) => variant.style && variant.price > 0 && variant.image);
+    .filter((variant) => variant.style && variant.price > 0);
 }
 
 export function variantsFromTortaFlavors(options: {
@@ -242,7 +242,7 @@ export function variantsFromTortaFlavors(options: {
         price,
         image: (flavor.image || cover).trim(),
       }))
-      .filter((variant) => variant.style && variant.price > 0 && variant.image);
+      .filter((variant) => variant.style && variant.price > 0);
 
   return [
     ...mapTier(
