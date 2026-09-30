@@ -1,4 +1,4 @@
-import { parseProductKind } from "./product-kind";
+import { isTortasProduct, parseProductKind, tortaCatalogFromPrice } from "./product-kind";
 import type { Product, ProductVariant } from "./types";
 
 export function parseVariants(raw: unknown): ProductVariant[] {
@@ -53,6 +53,9 @@ export function uniqueStyles(product: Product) {
 }
 
 export function displayPrice(product: Product) {
+  if (isTortasProduct(product)) {
+    return tortaCatalogFromPrice(product);
+  }
   const variants = product.variants || [];
   if (variants.length === 0) return product.price;
   return Math.min(...variants.map((variant) => variant.price));
@@ -68,6 +71,20 @@ export function withSyncedPricing(product: Product): Product {
   const kind = parseProductKind(product.kind);
   if (variants.length === 0) {
     return { ...product, soldBy, kind, variants: [] };
+  }
+  if (kind === "tortas") {
+    const traditional = variants.find((v) => v.size === "tradicional");
+    const price =
+      traditional?.price ||
+      Math.min(...variants.map((variant) => variant.price));
+    return {
+      ...product,
+      soldBy: "unit",
+      kind,
+      variants,
+      price,
+      image: product.image || variants[0]?.image || "",
+    };
   }
   return {
     ...product,

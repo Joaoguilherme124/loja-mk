@@ -10,7 +10,23 @@ import {
   uniqueStyles,
   variantLabel,
 } from "@/lib/product-variants";
-import { isDocinhosProduct, isTortasProduct } from "@/lib/product-kind";
+import {
+  buildTortaCartLabel,
+  buildTortaVariantId,
+  calcTortaTotal,
+  getTortaFlavors,
+  getTortaRates,
+  isDocinhosProduct,
+  isTortasProduct,
+  resolveTortaRatePerKg,
+  TORTA_CHOCOLATE_EXTRA_PER_KG,
+  TORTA_MAX_FLAVORS,
+  TORTA_SIZES,
+  tortaSizeLabel,
+  type TortaFlavorOption,
+  type TortaMassa,
+  type TortaSizeOption,
+} from "@/lib/product-kind";
 import {
   formatQuantity,
   formatRate,
@@ -28,12 +44,289 @@ type Props = {
   whatsapp: string;
 };
 
-export function ProductDetail({ product, whatsapp }: Props) {
+function TortaDetail({ product, whatsapp }: Props) {
+  const rates = getTortaRates(product);
+  const groups = getTortaFlavors(product);
+  const [size, setSize] = useState<TortaSizeOption>(TORTA_SIZES[0]);
+  const [massa, setMassa] = useState<TortaMassa>("tradicional");
+  const [selected, setSelected] = useState<TortaFlavorOption[]>([]);
+  const [quantity, setQuantity] = useState(1);
+  const { addItem } = useCart();
+
+  const ratePerKg = resolveTortaRatePerKg(rates, selected);
+  const usingSpecial = selected.some((flavor) => flavor.tier === "especial");
+  const unitPrice = calcTortaTotal({
+    kg: size.kg,
+    ratePerKg,
+    chocolate: massa === "chocolate",
+  });
+  const image = selected[0]?.image || product.image;
+  const displayName = buildTortaCartLabel({
+    productName: product.name,
+    size,
+    massa,
+    flavors: selected,
+  });
+  const canAdd = selected.length >= 1 && selected.length <= TORTA_MAX_FLAVORS;
+
+  const link = useMemo(
+    () =>
+      buildWhatsAppLink(
+        whatsapp,
+        { name: displayName, price: unitPrice, soldBy: "unit" },
+        quantity
+      ),
+    [whatsapp, displayName, unitPrice, quantity]
+  );
+
+  function toggleFlavor(flavor: TortaFlavorOption) {
+    setSelected((current) => {
+      const exists = current.some((entry) => entry.id === flavor.id);
+      if (exists) return current.filter((entry) => entry.id !== flavor.id);
+      if (current.length >= TORTA_MAX_FLAVORS) {
+        return [...current.slice(1), flavor];
+      }
+      return [...current, flavor];
+    });
+  }
+
+  function renderFlavorGroup(
+    title: string,
+    priceHint: string,
+    flavors: TortaFlavorOption[]
+  ) {
+    if (flavors.length === 0) return null;
+    return (
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium text-espresso">{title}</p>
+          <p className="text-xs text-espresso/60">{priceHint}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {flavors.map((flavor) => {
+            const active = selected.some((entry) => entry.id === flavor.id);
+            return (
+              <button
+                key={flavor.id}
+                type="button"
+                className={`rounded-full border px-4 py-2 text-sm ${
+                  active
+                    ? "border-mocha bg-mocha text-foam"
+                    : "border-cappuccino bg-white/70 text-espresso"
+                }`}
+                onClick={() => toggleFlavor(flavor)}
+              >
+                {flavor.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.8rem] bg-cappuccino/30">
+        <SafeImage
+          src={image}
+          alt={displayName}
+          fill
+          className="object-cover"
+          sizes="(max-width:768px) 100vw, 50vw"
+          priority
+        />
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-mocha">
+            {product.category}
+          </p>
+          <h1 className="mt-2 font-display text-4xl text-espresso md:text-5xl">
+            {product.name}
+          </h1>
+          <p className="mt-4 text-base leading-relaxed text-espresso/75">
+            {product.description}
+          </p>
+        </div>
+
+        <div className="space-y-5 rounded-[1.5rem] border border-cappuccino/60 bg-foam/70 p-5 shadow-[0_16px_40px_rgba(59,42,34,0.08)] backdrop-blur-sm md:p-6">
+          <div>
+            <p className="text-sm text-mocha">Valor estimado da torta</p>
+            <p className="font-display text-3xl text-espresso">
+              {formatPrice(unitPrice)}
+            </p>
+            <p className="mt-1 text-xs text-espresso/60">
+              {formatPrice(ratePerKg)}/kg
+              {usingSpecial ? " (especial)" : " (tradicional)"}
+              {massa === "chocolate"
+                ? ` + ${formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg massa chocolate`
+                : ""}{" "}
+              · {size.kg.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}{" "}
+              kg
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-espresso">
+              Circunferência
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {TORTA_SIZES.map((option) => (
+                <button
+                  key={option.cm}
+                  type="button"
+                  className={`rounded-full border px-4 py-2 text-left text-sm ${
+                    size.cm === option.cm
+                      ? "border-mocha bg-mocha text-foam"
+                      : "border-cappuccino bg-white/70 text-espresso"
+                  }`}
+                  onClick={() => setSize(option)}
+                >
+                  <span className="block font-medium">{option.cm} cm</span>
+                  <span className="block text-xs opacity-80">
+                    {option.kg.toLocaleString("pt-BR", {
+                      maximumFractionDigits: 1,
+                    })}{" "}
+                    kg · {option.fatias} fatias
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-espresso/60">{tortaSizeLabel(size)}</p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-espresso">Massa</p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { id: "tradicional" as const, label: "Tradicional" },
+                  {
+                    id: "chocolate" as const,
+                    label: `Chocolate (+${formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg)`,
+                  },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`rounded-full border px-4 py-2 text-sm ${
+                    massa === option.id
+                      ? "border-mocha bg-mocha text-foam"
+                      : "border-cappuccino bg-white/70 text-espresso"
+                  }`}
+                  onClick={() => setMassa(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-espresso">
+              Sabores (até {TORTA_MAX_FLAVORS})
+            </p>
+            {renderFlavorGroup(
+              "Tradicionais",
+              `${formatPrice(rates.traditional)}/kg`,
+              groups.traditional
+            )}
+            {renderFlavorGroup(
+              "Especiais",
+              `${formatPrice(rates.special)}/kg — se escolher algum, a torta usa este valor`,
+              groups.special
+            )}
+            {selected.length === 0 ? (
+              <p className="text-xs text-espresso/60">
+                Escolha 1 ou 2 sabores.
+              </p>
+            ) : (
+              <p className="text-xs text-espresso/60">
+                Selecionados: {selected.map((f) => f.name).join(" + ")}
+              </p>
+            )}
+          </div>
+
+          <label className="block space-y-2 text-sm font-medium text-espresso">
+            Quantidade de tortas
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="h-10 w-10 rounded-full border border-cappuccino bg-white/70 text-lg"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                aria-label="Diminuir"
+              >
+                −
+              </button>
+              <span className="min-w-8 text-center text-lg font-semibold">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                className="h-10 w-10 rounded-full border border-cappuccino bg-white/70 text-lg"
+                onClick={() => setQuantity((q) => q + 1)}
+                aria-label="Aumentar"
+              >
+                +
+              </button>
+            </div>
+          </label>
+
+          <p className="text-sm text-espresso/70">
+            Total estimado:{" "}
+            <strong className="text-espresso">
+              {formatPrice(unitPrice * quantity)}
+            </strong>
+          </p>
+
+          <button
+            type="button"
+            className="btn-primary w-full"
+            disabled={!canAdd}
+            onClick={() =>
+              addItem(
+                {
+                  productId: product.id,
+                  variantId: buildTortaVariantId({
+                    cm: size.cm,
+                    massa,
+                    flavorIds: selected.map((flavor) => flavor.id),
+                  }),
+                  name: displayName,
+                  price: unitPrice,
+                  image,
+                  soldBy: "unit",
+                  kind: "tortas",
+                },
+                quantity
+              )
+            }
+          >
+            Adicionar ao pedido
+          </button>
+
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`btn-ghost w-full ${!canAdd ? "pointer-events-none opacity-50" : ""}`}
+            aria-disabled={!canAdd}
+          >
+            Pedir só este no WhatsApp
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DefaultProductDetail({ product, whatsapp }: Props) {
   const variantsEnabled = hasVariants(product);
   const docinhos = isDocinhosProduct(product);
-  const tortas = isTortasProduct(product);
-  const flavorOnly = docinhos || tortas;
-  const kind = docinhos ? "docinhos" : tortas ? "tortas" : product.kind;
+  const kind = docinhos ? "docinhos" : product.kind;
   const soldBy = parseSoldBy(product.soldBy);
   const byKg = isSoldByKg(soldBy);
   const step = quantityStep(soldBy, kind);
@@ -52,18 +345,16 @@ export function ProductDetail({ product, whatsapp }: Props) {
   const unitPrice = selectedVariant?.price ?? product.price;
   const image = selectedVariant?.image ?? product.image;
   const displayName = selectedVariant
-    ? flavorOnly
-      ? tortas
-        ? `${product.name} (${selectedVariant.style} · ${selectedVariant.size})`
-        : `${product.name} (${selectedVariant.style})`
+    ? docinhos
+      ? `${product.name} (${selectedVariant.style})`
       : `${product.name} (${variantLabel(selectedVariant)})`
     : product.name;
 
   const availableStylesForSize = useMemo(() => {
     if (!variantsEnabled) return styles;
-    if (flavorOnly) return styles;
+    if (docinhos) return styles;
     return styles.filter((entry) => findVariant(product, size, entry));
-  }, [variantsEnabled, styles, product, size, flavorOnly]);
+  }, [variantsEnabled, styles, product, size, docinhos]);
 
   const link = useMemo(
     () =>
@@ -87,7 +378,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
 
   function selectFlavor(nextStyle: string) {
     setStyle(nextStyle);
-    if (flavorOnly) {
+    if (docinhos) {
       const match = (product.variants || []).find(
         (variant) => variant.style === nextStyle
       );
@@ -130,7 +421,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
             <p className="text-sm text-mocha">
               {byKg
                 ? "Valor por kg"
-                : flavorOnly
+                : docinhos
                   ? "Valor por unidade"
                   : "Valor unitário"}
             </p>
@@ -141,12 +432,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
 
           {variantsEnabled ? (
             <div className="space-y-4">
-              {tortas && size ? (
-                <p className="text-sm text-espresso/75">
-                  Tamanho: <strong className="text-espresso">{size}</strong>
-                </p>
-              ) : null}
-              {!flavorOnly ? (
+              {!docinhos ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-espresso">Tamanho</p>
                   <div className="flex flex-wrap gap-2">
@@ -169,7 +455,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
               ) : null}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-espresso">
-                  {flavorOnly ? "Sabor" : "Estilo"}
+                  {docinhos ? "Sabor" : "Estilo"}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {availableStylesForSize.map((entry) => (
@@ -182,7 +468,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
                           : "border-cappuccino bg-white/70 text-espresso"
                       }`}
                       onClick={() =>
-                        flavorOnly ? selectFlavor(entry) : setStyle(entry)
+                        docinhos ? selectFlavor(entry) : setStyle(entry)
                       }
                     >
                       {entry}
@@ -271,7 +557,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
                   price: unitPrice,
                   image,
                   soldBy,
-                  kind: docinhos ? "docinhos" : tortas ? "tortas" : undefined,
+                  kind: docinhos ? "docinhos" : undefined,
                 },
                 quantity
               )
@@ -292,4 +578,11 @@ export function ProductDetail({ product, whatsapp }: Props) {
       </div>
     </>
   );
+}
+
+export function ProductDetail({ product, whatsapp }: Props) {
+  if (isTortasProduct(product)) {
+    return <TortaDetail product={product} whatsapp={whatsapp} />;
+  }
+  return <DefaultProductDetail product={product} whatsapp={whatsapp} />;
 }

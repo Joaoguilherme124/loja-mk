@@ -1,6 +1,6 @@
 export type SoldBy = "unit" | "kg";
 
-/** bolos = tamanho/estilo; tortas = tamanhos fixos (cm + rendimento) + sabores; docinhos = sabores */
+/** bolos = tamanho/estilo; tortas = kg por circunferência + massa + sabores tradicional/especial; docinhos = sabores */
 export type ProductKind = "bolos" | "tortas" | "docinhos" | "default";
 
 export type ProductVariant = {

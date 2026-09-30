@@ -57,7 +57,9 @@ export function ProductCard({ product }: Props) {
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-base font-semibold text-mocha md:text-lg">
-              {withOptions ? `A partir de ${priceLabel}` : priceLabel}
+              {withOptions || tortas
+                ? `A partir de ${priceLabel}`
+                : priceLabel}
             </p>
             <div className="flex gap-2">
               <Link
