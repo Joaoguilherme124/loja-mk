@@ -10,7 +10,7 @@ import {
   uniqueStyles,
   variantLabel,
 } from "@/lib/product-variants";
-import { isDocinhosProduct } from "@/lib/product-kind";
+import { isDocinhosProduct, isTortasProduct } from "@/lib/product-kind";
 import {
   formatQuantity,
   formatRate,
@@ -31,7 +31,9 @@ type Props = {
 export function ProductDetail({ product, whatsapp }: Props) {
   const variantsEnabled = hasVariants(product);
   const docinhos = isDocinhosProduct(product);
-  const kind = docinhos ? "docinhos" : product.kind;
+  const tortas = isTortasProduct(product);
+  const flavorOnly = docinhos || tortas;
+  const kind = docinhos ? "docinhos" : tortas ? "tortas" : product.kind;
   const soldBy = parseSoldBy(product.soldBy);
   const byKg = isSoldByKg(soldBy);
   const step = quantityStep(soldBy, kind);
@@ -50,16 +52,18 @@ export function ProductDetail({ product, whatsapp }: Props) {
   const unitPrice = selectedVariant?.price ?? product.price;
   const image = selectedVariant?.image ?? product.image;
   const displayName = selectedVariant
-    ? docinhos
-      ? `${product.name} (${selectedVariant.style})`
+    ? flavorOnly
+      ? tortas
+        ? `${product.name} (${selectedVariant.style} · ${selectedVariant.size})`
+        : `${product.name} (${selectedVariant.style})`
       : `${product.name} (${variantLabel(selectedVariant)})`
     : product.name;
 
   const availableStylesForSize = useMemo(() => {
     if (!variantsEnabled) return styles;
-    if (docinhos) return styles;
+    if (flavorOnly) return styles;
     return styles.filter((entry) => findVariant(product, size, entry));
-  }, [variantsEnabled, styles, product, size, docinhos]);
+  }, [variantsEnabled, styles, product, size, flavorOnly]);
 
   const link = useMemo(
     () =>
@@ -83,7 +87,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
 
   function selectFlavor(nextStyle: string) {
     setStyle(nextStyle);
-    if (docinhos) {
+    if (flavorOnly) {
       const match = (product.variants || []).find(
         (variant) => variant.style === nextStyle
       );
@@ -126,7 +130,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
             <p className="text-sm text-mocha">
               {byKg
                 ? "Valor por kg"
-                : docinhos
+                : flavorOnly
                   ? "Valor por unidade"
                   : "Valor unitário"}
             </p>
@@ -137,7 +141,12 @@ export function ProductDetail({ product, whatsapp }: Props) {
 
           {variantsEnabled ? (
             <div className="space-y-4">
-              {!docinhos ? (
+              {tortas && size ? (
+                <p className="text-sm text-espresso/75">
+                  Tamanho: <strong className="text-espresso">{size}</strong>
+                </p>
+              ) : null}
+              {!flavorOnly ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-espresso">Tamanho</p>
                   <div className="flex flex-wrap gap-2">
@@ -160,7 +169,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
               ) : null}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-espresso">
-                  {docinhos ? "Sabor" : "Estilo"}
+                  {flavorOnly ? "Sabor" : "Estilo"}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {availableStylesForSize.map((entry) => (
@@ -173,7 +182,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
                           : "border-cappuccino bg-white/70 text-espresso"
                       }`}
                       onClick={() =>
-                        docinhos ? selectFlavor(entry) : setStyle(entry)
+                        flavorOnly ? selectFlavor(entry) : setStyle(entry)
                       }
                     >
                       {entry}
@@ -185,7 +194,11 @@ export function ProductDetail({ product, whatsapp }: Props) {
           ) : null}
 
           <label className="block space-y-2 text-sm font-medium text-espresso">
-            {byKg ? "Peso (kg) — mín. 1" : docinhos ? "Quantidade (mín. 25)" : "Quantidade"}
+            {byKg
+              ? "Peso (kg) — mín. 1"
+              : docinhos
+                ? "Quantidade (mín. 25)"
+                : "Quantidade"}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -258,7 +271,7 @@ export function ProductDetail({ product, whatsapp }: Props) {
                   price: unitPrice,
                   image,
                   soldBy,
-                  kind: docinhos ? "docinhos" : undefined,
+                  kind: docinhos ? "docinhos" : tortas ? "tortas" : undefined,
                 },
                 quantity
               )

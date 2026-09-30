@@ -3,9 +3,15 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ImageUploader } from "@/components/ImageUploader";
 import {
+  buildTortaSize,
   flavorsFromVariants,
   isDocinhosProduct,
-  parseProductKind,
+  isTortasProduct,
+  kindCategory,
+  parseTortaSize,
+  resolveFormKind,
+  TORTA_SIZES,
+  tortaSizeLabel,
   variantsFromFlavors,
 } from "@/lib/product-kind";
 import { formatRate, parseSoldBy } from "@/lib/sold-by";
@@ -43,13 +49,14 @@ const emptyFlavor = (): FlavorForm => ({
 });
 
 const emptyForm = {
-  kind: "default" as ProductKind,
+  kind: "bolos" as ProductKind,
   name: "",
   description: "",
   price: "",
   image: "",
-  category: "Geral",
+  category: "Bolos",
   soldBy: "unit" as SoldBy,
+  tortaCm: "",
   featured: false,
   active: true,
   variants: [] as VariantForm[],
@@ -95,9 +102,9 @@ export default function AdminProductsPage() {
   }, []);
 
   function startEdit(product: Product) {
-    const kind = isDocinhosProduct(product)
-      ? "docinhos"
-      : parseProductKind(product.kind);
+    const kind = resolveFormKind(product);
+    const flavorMode = kind === "docinhos" || kind === "tortas";
+    const tortaSize = parseTortaSize(product.variants?.[0]?.size || "");
     setEditingId(product.id);
     setForm({
       kind,
@@ -106,16 +113,16 @@ export default function AdminProductsPage() {
       price: String(product.price),
       image: product.image,
       category: product.category,
-      soldBy: kind === "docinhos" ? "unit" : parseSoldBy(product.soldBy),
+      soldBy: flavorMode ? "unit" : parseSoldBy(product.soldBy),
+      tortaCm: kind === "tortas" ? tortaSize.cm : "",
       featured: product.featured,
       active: product.active,
-      variants: kind === "docinhos" ? [] : toVariantForms(product.variants),
-      flavors:
-        kind === "docinhos"
-          ? toFlavorForms(product.variants).length > 0
-            ? toFlavorForms(product.variants)
-            : [emptyFlavor()]
-          : [],
+      variants: flavorMode ? [] : toVariantForms(product.variants),
+      flavors: flavorMode
+        ? toFlavorForms(product.variants).length > 0
+          ? toFlavorForms(product.variants)
+          : [emptyFlavor()]
+        : [],
     });
     requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -134,9 +141,11 @@ export default function AdminProductsPage() {
       ...emptyForm,
       kind,
       soldBy: "unit",
-      category: kind === "docinhos" ? "Docinhos" : "Geral",
-      flavors: kind === "docinhos" ? [emptyFlavor()] : [],
+      category: kindCategory(kind),
+      flavors:
+        kind === "docinhos" || kind === "tortas" ? [emptyFlavor()] : [],
       variants: [],
+      tortaCm: "",
       price: "",
     });
   }
@@ -182,8 +191,14 @@ export default function AdminProductsPage() {
       let image = form.image.trim();
       let price = Number(form.price) || 0;
 
-      if (form.kind === "docinhos") {
+      if (form.kind === "docinhos" || form.kind === "tortas") {
         const cover = form.image.trim();
+        if (form.kind === "tortas") {
+          if (!buildTortaSize(form.tortaCm)) {
+            throw new Error("Escolha o tamanho da torta (cm)");
+          }
+        }
+
         const flavors = form.flavors.map((flavor) => ({
           id: flavor.id,
           name: flavor.name.trim(),
@@ -203,7 +218,9 @@ export default function AdminProductsPage() {
           );
         }
 
-        variants = variantsFromFlavors(valid, cover);
+        const size =
+          form.kind === "tortas" ? buildTortaSize(form.tortaCm) : undefined;
+        variants = variantsFromFlavors(valid, cover, size);
         image = cover || variants[0]?.image || "";
         price = Math.min(...variants.map((variant) => variant.price));
       } else {
@@ -231,7 +248,10 @@ export default function AdminProductsPage() {
         name: form.name,
         description: form.description,
         price,
-        soldBy: form.kind === "docinhos" ? "unit" : form.soldBy,
+        soldBy:
+          form.kind === "docinhos" || form.kind === "tortas"
+            ? "unit"
+            : form.soldBy,
         kind: form.kind,
         image,
         category: form.category,
@@ -267,14 +287,16 @@ export default function AdminProductsPage() {
   }
 
   const isDocinhos = form.kind === "docinhos";
-  const usingVariants = !isDocinhos && form.variants.length > 0;
+  const isTortas = form.kind === "tortas";
+  const flavorMode = isDocinhos || isTortas;
+  const usingVariants = !flavorMode && form.variants.length > 0;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-4xl text-espresso">Produtos</h1>
         <p className="mt-2 text-espresso/70">
-          Cadastre bolos, tortas e docinhos. Para docinhos use o modo rápido.
+          Cadastre bolos, tortas e docinhos.
         </p>
       </div>
 
@@ -288,37 +310,41 @@ export default function AdminProductsPage() {
         </h2>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={`rounded-full border px-4 py-2 text-sm ${
-              !isDocinhos
-                ? "border-mocha bg-mocha text-foam"
-                : "border-cappuccino bg-white/70 text-espresso"
-            }`}
-            onClick={() => setKind("default")}
-          >
-            Bolos/Tortas
-          </button>
-          <button
-            type="button"
-            className={`rounded-full border px-4 py-2 text-sm ${
-              isDocinhos
-                ? "border-mocha bg-mocha text-foam"
-                : "border-cappuccino bg-white/70 text-espresso"
-            }`}
-            onClick={() => setKind("docinhos")}
-          >
-            Docinhos
-          </button>
+          {(
+            [
+              { id: "bolos", label: "Bolos" },
+              { id: "tortas", label: "Tortas" },
+              { id: "docinhos", label: "Docinhos" },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`rounded-full border px-4 py-2 text-sm ${
+                form.kind === option.id
+                  ? "border-mocha bg-mocha text-foam"
+                  : "border-cappuccino bg-white/70 text-espresso"
+              }`}
+              onClick={() => setKind(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm font-medium">
-            {isDocinhos ? "Nome do grupo" : "Nome"}
+            {flavorMode ? "Nome do grupo" : "Nome"}
             <input
               className="field"
               value={form.name}
-              placeholder={isDocinhos ? "Ex.: Docinhos" : ""}
+              placeholder={
+                isDocinhos
+                  ? "Ex.: Docinhos"
+                  : isTortas
+                    ? "Ex.: Tortas"
+                    : ""
+              }
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
             />
@@ -343,7 +369,7 @@ export default function AdminProductsPage() {
             />
           </label>
 
-          {!isDocinhos ? (
+          {!flavorMode ? (
             <>
               <label className="space-y-2 text-sm font-medium">
                 Vendido por
@@ -386,6 +412,36 @@ export default function AdminProductsPage() {
                 </p>
               )}
             </>
+          ) : isTortas ? (
+            <div className="space-y-3 md:col-span-2">
+              <p className="text-sm font-medium text-espresso">
+                Tamanho (cm e rendimento)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {TORTA_SIZES.map((option) => {
+                  const selected = form.tortaCm === String(option.cm);
+                  return (
+                    <button
+                      key={option.cm}
+                      type="button"
+                      className={`rounded-full border px-4 py-2 text-sm ${
+                        selected
+                          ? "border-mocha bg-mocha text-foam"
+                          : "border-cappuccino bg-white/70 text-espresso"
+                      }`}
+                      onClick={() =>
+                        setForm({ ...form, tortaCm: String(option.cm) })
+                      }
+                    >
+                      {tortaSizeLabel(option)}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-sm text-espresso/70">
+                Cadastre os sabores abaixo com o preço de cada um (sem kg).
+              </p>
+            </div>
           ) : (
             <p className="text-sm text-espresso/70 md:col-span-2">
               Cadastre os sabores abaixo. O cliente escolhe o sabor e a
@@ -415,9 +471,9 @@ export default function AdminProductsPage() {
           </div>
         </div>
 
-        {!usingVariants || isDocinhos ? (
+        {!usingVariants || flavorMode ? (
           <div className="space-y-2">
-            {isDocinhos ? (
+            {flavorMode ? (
               <p className="text-sm font-medium text-espresso">
                 Foto de capa (opcional)
               </p>
@@ -426,7 +482,7 @@ export default function AdminProductsPage() {
               value={form.image}
               onChange={(image) => setForm({ ...form, image })}
             />
-            {isDocinhos ? (
+            {flavorMode ? (
               <p className="text-xs text-espresso/60">
                 Usada no catálogo. Se um sabor não tiver foto própria, usa esta.
               </p>
@@ -434,13 +490,15 @@ export default function AdminProductsPage() {
           </div>
         ) : null}
 
-        {isDocinhos ? (
+        {flavorMode ? (
           <div className="space-y-3 rounded-[1.1rem] border border-cappuccino/40 bg-white/40 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-display text-xl text-espresso">Sabores</h3>
                 <p className="text-sm text-espresso/65">
-                  Nome, preço e foto de cada sabor.
+                  {isTortas
+                    ? "Nome, preço e foto de cada sabor da torta."
+                    : "Nome, preço e foto de cada sabor."}
                 </p>
               </div>
               <button
@@ -646,12 +704,19 @@ export default function AdminProductsPage() {
               <p className="font-semibold text-espresso">{product.name}</p>
               <p className="text-sm text-espresso/65">
                 {product.category}
-                {isDocinhosProduct(product) ? " · docinhos" : ""} ·{" "}
+                {isDocinhosProduct(product)
+                  ? " · docinhos"
+                  : isTortasProduct(product)
+                    ? " · tortas"
+                    : ""}{" "}
+                ·{" "}
                 {(product.variants || []).length > 0
                   ? `a partir de ${formatRate(product.price, product.soldBy, formatPrice)} · ${
                       product.variants?.length
                     } ${
-                      isDocinhosProduct(product) ? "sabores" : "variações"
+                      isDocinhosProduct(product) || isTortasProduct(product)
+                        ? "sabores"
+                        : "variações"
                     }`
                   : formatRate(product.price, product.soldBy, formatPrice)}
                 {!product.active ? " · oculto" : ""}

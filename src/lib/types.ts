@@ -1,7 +1,7 @@
 export type SoldBy = "unit" | "kg";
 
-/** default = produto normal/torta; docinhos = cadastro rápido por sabor */
-export type ProductKind = "default" | "docinhos";
+/** bolos = tamanho/estilo; tortas = tamanhos fixos (cm + rendimento) + sabores; docinhos = sabores */
+export type ProductKind = "bolos" | "tortas" | "docinhos" | "default";
 
 export type ProductVariant = {
   id: string;
