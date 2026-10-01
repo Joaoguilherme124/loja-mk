@@ -20,6 +20,8 @@ export type Product = {
   soldBy: SoldBy;
   kind: ProductKind;
   image: string;
+  /** Galeria (capa = images[0]). Usado no carrossel de tortas. */
+  images?: string[];
   category: string;
   featured: boolean;
   active: boolean;

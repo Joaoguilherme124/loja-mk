@@ -28,6 +28,9 @@ export async function POST(request: Request) {
     soldBy: parseSoldBy(body.soldBy),
     kind: parseProductKind(body.kind),
     image: String(body.image || "").trim(),
+    images: Array.isArray(body.images)
+      ? body.images.map((item: unknown) => String(item || "").trim()).filter(Boolean)
+      : undefined,
     category: String(body.category || "Geral").trim(),
     featured: Boolean(body.featured),
     active: body.active !== false,

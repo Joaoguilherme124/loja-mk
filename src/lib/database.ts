@@ -1,5 +1,6 @@
 import { Pool, type QueryResultRow } from "pg";
 import { defaultStore } from "./seed";
+import { parseImages } from "./product-images";
 import { parseVariants } from "./product-variants";
 import { parseSoldBy } from "./sold-by";
 import { parseProductKind } from "./product-kind";
@@ -21,6 +22,7 @@ type ProductRow = QueryResultRow & {
   price: number | string;
   category: string;
   image: string;
+  images?: string | null;
   featured: boolean;
   active: boolean;
   createdAt: string;
@@ -141,6 +143,10 @@ async function initializeDatabase(): Promise<void> {
     ALTER TABLE products
     ADD COLUMN IF NOT EXISTS kind VARCHAR(16) NOT NULL DEFAULT 'default'
   `);
+  await db.query(`
+    ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS images TEXT NULL
+  `);
 
   const settings = await db.query('SELECT id FROM settings WHERE id = 1');
   if (settings.rowCount === 0) {
@@ -187,20 +193,24 @@ export async function readDatabase(): Promise<DatabaseData> {
       about: String(s.about),
     },
     users: usersResult.rows.map((user) => ({ ...user, active: Boolean(user.active) })),
-    products: productsResult.rows.map((product) => ({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: Number(product.price),
-      soldBy: parseSoldBy(product.soldBy),
-      kind: parseProductKind(product.kind),
-      category: product.category,
-      image: product.image,
-      featured: Boolean(product.featured),
-      active: Boolean(product.active),
-      createdAt: new Date(product.createdAt).toISOString(),
-      variants: parseVariants(product.variants),
-    }) satisfies Product),
+    products: productsResult.rows.map((product) => {
+      const images = parseImages(product.images, product.image);
+      return {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: Number(product.price),
+        soldBy: parseSoldBy(product.soldBy),
+        kind: parseProductKind(product.kind),
+        category: product.category,
+        image: images[0] || product.image || "",
+        images,
+        featured: Boolean(product.featured),
+        active: Boolean(product.active),
+        createdAt: new Date(product.createdAt).toISOString(),
+        variants: parseVariants(product.variants),
+      } satisfies Product;
+    }),
     promotions: promotionsResult.rows as Promotion[],
     news: newsResult.rows as NewsItem[],
     orders: ordersResult.rows.map((order) => ({
@@ -235,7 +245,7 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
     await client.query("DELETE FROM products");
     for (const product of data.products) {
       await client.query(
-        'INSERT INTO products (id, name, description, price, category, image, featured, active, "createdAt", variants, "soldBy", kind) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+        'INSERT INTO products (id, name, description, price, category, image, images, featured, active, "createdAt", variants, "soldBy", kind) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
         [
           product.id,
           product.name,
@@ -243,6 +253,7 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
           product.price,
           product.category,
           product.image,
+          JSON.stringify(product.images || (product.image ? [product.image] : [])),
           product.featured,
           product.active,
           product.createdAt,

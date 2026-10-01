@@ -3,6 +3,7 @@ import path from "path";
 import { defaultStore } from "./seed";
 import { parseSoldBy } from "./sold-by";
 import { parseProductKind } from "./product-kind";
+import { parseImages } from "./product-images";
 import type { Order, Product, StoreData, User } from "./types";
 
 type LocalDatabaseData = StoreData & { users: User[]; orders: Order[] };
@@ -12,11 +13,16 @@ const DATA_FILE = path.join(DATA_DIR, "local-store.json");
 
 function withDefaults(raw: Partial<LocalDatabaseData> | null): LocalDatabaseData {
   const products = (raw?.products || defaultStore.products).map(
-    (product: Product) => ({
-      ...product,
-      soldBy: parseSoldBy(product.soldBy),
-      kind: parseProductKind(product.kind),
-    })
+    (product: Product) => {
+      const images = parseImages(product.images, product.image);
+      return {
+        ...product,
+        soldBy: parseSoldBy(product.soldBy),
+        kind: parseProductKind(product.kind),
+        images,
+        image: images[0] || product.image || "",
+      };
+    }
   );
 
   return {

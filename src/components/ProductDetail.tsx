@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useCart } from "@/components/CartProvider";
+import { ImageCarousel } from "@/components/ImageCarousel";
 import { SafeImage } from "@/components/SafeImage";
 import {
   findVariant,
@@ -26,6 +27,7 @@ import {
   type TortaMassa,
   type TortaSizeOption,
 } from "@/lib/product-kind";
+import { productGallery } from "@/lib/product-images";
 import {
   formatQuantity,
   formatRate,
@@ -58,7 +60,8 @@ function TortaDetail({ product, whatsapp }: Props) {
     ratePerKg,
     chocolate: massa === "chocolate",
   });
-  const image = selected[0]?.image || product.image;
+  const gallery = productGallery(product);
+  const image = gallery[0] || product.image;
   const displayName = buildTortaCartLabel({
     productName: product.name,
     size,
@@ -126,11 +129,9 @@ function TortaDetail({ product, whatsapp }: Props) {
   return (
     <>
       <div className="relative aspect-[4/5] overflow-hidden rounded-[1.8rem] bg-cappuccino/30">
-        <SafeImage
-          src={image}
+        <ImageCarousel
+          images={gallery.length > 0 ? gallery : image ? [image] : []}
           alt={displayName}
-          fill
-          className="object-cover"
           sizes="(max-width:768px) 100vw, 50vw"
           priority
         />

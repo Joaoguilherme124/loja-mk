@@ -48,6 +48,14 @@ export async function PUT(request: Request, { params }: Params) {
       body.kind !== undefined ? body.kind : current.kind
     ),
     image: String(body.image ?? current.image).trim(),
+    images:
+      body.images !== undefined
+        ? Array.isArray(body.images)
+          ? body.images
+              .map((item: unknown) => String(item || "").trim())
+              .filter(Boolean)
+          : current.images
+        : current.images,
     category: String(body.category ?? current.category).trim(),
     featured: Boolean(body.featured),
     active: body.active !== false,

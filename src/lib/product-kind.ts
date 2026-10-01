@@ -10,7 +10,7 @@ export const TORTA_MAX_FLAVORS = 2;
 export type TortaMassa = "tradicional" | "chocolate";
 
 export const TORTA_SIZES = [
-  { cm: 15, kg: 1.2, fatias: "8 a 10" },
+  { cm: 15, kg: 1.5, fatias: "8 a 10" },
   { cm: 18, kg: 1.8, fatias: "12 a 15" },
   { cm: 20, kg: 2.5, fatias: "23 a 25" },
   { cm: 23, kg: 3.5, fatias: "30 a 35" },

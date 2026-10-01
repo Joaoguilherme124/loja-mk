@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { ImageCarousel } from "@/components/ImageCarousel";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
 import { displayPrice, hasVariants } from "@/lib/product-variants";
 import { isDocinhosProduct, isTortasProduct } from "@/lib/product-kind";
+import { productGallery } from "@/lib/product-images";
 import { formatRate, parseSoldBy } from "@/lib/sold-by";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/whatsapp";
@@ -22,22 +24,41 @@ export function ProductCard({ product }: Props) {
   const soldBy = parseSoldBy(product.soldBy);
   const needsChoice = withOptions || soldBy === "kg" || docinhos || tortas;
   const priceLabel = formatRate(price, soldBy, formatPrice);
+  const gallery = productGallery(product);
 
   return (
     <article className="border-b border-cappuccino/40 py-4 first:pt-0 last:border-b-0 last:pb-0">
       <div className="flex items-start gap-4 md:gap-5">
-        <Link
-          href={`/produto/${product.id}`}
-          className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-cappuccino/30 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-mocha md:h-32 md:w-32"
-        >
-          <SafeImage
-            src={product.image}
-            alt={product.name}
-            fill
-            sizes="128px"
-            className="object-cover"
-          />
-        </Link>
+        <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-cappuccino/30 md:h-32 md:w-32">
+          {tortas && gallery.length > 0 ? (
+            <ImageCarousel
+              images={gallery}
+              alt={product.name}
+              sizes="128px"
+              stopLinkNavigation
+            />
+          ) : (
+            <Link
+              href={`/produto/${product.id}`}
+              className="absolute inset-0 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-mocha"
+            >
+              <SafeImage
+                src={product.image}
+                alt={product.name}
+                fill
+                sizes="128px"
+                className="object-cover"
+              />
+            </Link>
+          )}
+          {tortas && gallery.length > 0 ? (
+            <Link
+              href={`/produto/${product.id}`}
+              className="absolute inset-0 z-0"
+              aria-label={`Ver ${product.name}`}
+            />
+          ) : null}
+        </div>
 
         <div className="min-w-0 flex-1">
           <Link

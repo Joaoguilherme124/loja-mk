@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { GalleryUploader } from "@/components/GalleryUploader";
 import { ImageUploader } from "@/components/ImageUploader";
 import {
   flavorsFromVariants,
@@ -16,6 +17,7 @@ import {
   variantsFromFlavors,
   variantsFromTortaFlavors,
 } from "@/lib/product-kind";
+import { productGallery } from "@/lib/product-images";
 import { displayPrice } from "@/lib/product-variants";
 import { formatRate, parseSoldBy } from "@/lib/sold-by";
 import type { Product, ProductKind, ProductVariant, SoldBy } from "@/lib/types";
@@ -67,6 +69,7 @@ const emptyForm = {
   description: "",
   price: "",
   image: "",
+  images: [] as string[],
   category: "Bolos",
   soldBy: "unit" as SoldBy,
   tortaPriceTraditional: "",
@@ -141,6 +144,7 @@ export default function AdminProductsPage() {
       description: product.description,
       price: String(product.price),
       image: product.image,
+      images: isTortas ? productGallery(product) : [],
       category: product.category,
       soldBy: isDocinhos || isTortas ? "unit" : parseSoldBy(product.soldBy),
       tortaPriceTraditional: isTortas ? String(rates.traditional || "") : "",
@@ -257,7 +261,8 @@ export default function AdminProductsPage() {
       let price = Number(form.price) || 0;
 
       if (form.kind === "tortas") {
-        const cover = form.image.trim();
+        const gallery = form.images.map((url) => url.trim()).filter(Boolean);
+        const cover = gallery[0] || form.image.trim();
         const traditionalPrice = Number(form.tortaPriceTraditional) || 0;
         const specialPrice = Number(form.tortaPriceSpecial) || 0;
 
@@ -293,6 +298,35 @@ export default function AdminProductsPage() {
         });
         image = cover;
         price = traditionalPrice;
+
+        const payload = {
+          name: form.name,
+          description: form.description,
+          price,
+          soldBy: "unit" as const,
+          kind: form.kind,
+          image,
+          images: gallery,
+          category: form.category,
+          featured: form.featured,
+          active: form.active,
+          variants,
+        };
+
+        const res = await fetch(
+          editingId ? `/api/products/${editingId}` : "/api/products",
+          {
+            method: editingId ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Erro ao salvar");
+        setMessage(editingId ? "Produto atualizado." : "Produto criado.");
+        resetForm();
+        await load();
+        return;
       } else if (form.kind === "docinhos") {
         const cover = form.image.trim();
         const flavors = form.flavors.map((flavor) => ({
@@ -339,10 +373,7 @@ export default function AdminProductsPage() {
         name: form.name,
         description: form.description,
         price,
-        soldBy:
-          form.kind === "docinhos" || form.kind === "tortas"
-            ? "unit"
-            : form.soldBy,
+        soldBy: form.kind === "docinhos" ? "unit" : form.soldBy,
         kind: form.kind,
         image,
         category: form.category,
@@ -662,25 +693,44 @@ export default function AdminProductsPage() {
 
         {!usingVariants || isDocinhos || isTortas ? (
           <div className="space-y-2">
-            {isDocinhos || isTortas ? (
-              <p className="text-sm font-medium text-espresso">
-                Foto de capa (opcional)
-              </p>
-            ) : null}
-            <ImageUploader
-              value={form.image}
-              onChange={(image) => setForm({ ...form, image })}
-            />
-            {isDocinhos ? (
-              <p className="text-xs text-espresso/60">
-                Opcional. Se um sabor não tiver foto própria, usa esta.
-              </p>
-            ) : null}
             {isTortas ? (
-              <p className="text-xs text-espresso/60">
-                Opcional. Sem foto, o catálogo mostra um espaço reservado.
-              </p>
-            ) : null}
+              <>
+                <p className="text-sm font-medium text-espresso">
+                  Fotos da torta (carrossel)
+                </p>
+                <GalleryUploader
+                  values={form.images}
+                  onChange={(images) =>
+                    setForm({
+                      ...form,
+                      images,
+                      image: images[0] || "",
+                    })
+                  }
+                />
+                <p className="text-xs text-espresso/60">
+                  A primeira foto é a capa. Várias fotos aparecem em carrossel no
+                  catálogo.
+                </p>
+              </>
+            ) : (
+              <>
+                {isDocinhos ? (
+                  <p className="text-sm font-medium text-espresso">
+                    Foto de capa (opcional)
+                  </p>
+                ) : null}
+                <ImageUploader
+                  value={form.image}
+                  onChange={(image) => setForm({ ...form, image })}
+                />
+                {isDocinhos ? (
+                  <p className="text-xs text-espresso/60">
+                    Opcional. Se um sabor não tiver foto própria, usa esta.
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
 

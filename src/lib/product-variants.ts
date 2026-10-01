@@ -1,4 +1,9 @@
-import { isTortasProduct, parseProductKind, tortaCatalogFromPrice } from "./product-kind";
+import {
+  isTortasProduct,
+  parseProductKind,
+  tortaCatalogFromPrice,
+} from "./product-kind";
+import { withSyncedImages } from "./product-images";
 import type { Product, ProductVariant } from "./types";
 
 export function parseVariants(raw: unknown): ProductVariant[] {
@@ -69,29 +74,38 @@ export function withSyncedPricing(product: Product): Product {
   const variants = parseVariants(product.variants);
   const soldBy = product.soldBy === "kg" ? "kg" : "unit";
   const kind = parseProductKind(product.kind);
+  const withImages = withSyncedImages(product);
+
   if (variants.length === 0) {
-    return { ...product, soldBy, kind, variants: [] };
+    return { ...withImages, soldBy, kind, variants: [] };
   }
   if (kind === "tortas") {
     const traditional = variants.find((v) => v.size === "tradicional");
     const price =
       traditional?.price ||
       Math.min(...variants.map((variant) => variant.price));
+    const images =
+      withImages.images.length > 0
+        ? withImages.images
+        : variants[0]?.image
+          ? [variants[0].image]
+          : [];
     return {
-      ...product,
+      ...withImages,
       soldBy: "unit",
       kind,
       variants,
       price,
-      image: product.image || variants[0]?.image || "",
+      images,
+      image: images[0] || withImages.image || "",
     };
   }
   return {
-    ...product,
+    ...withImages,
     soldBy,
     kind,
     variants,
     price: Math.min(...variants.map((variant) => variant.price)),
-    image: variants[0]?.image || product.image,
+    image: withImages.image || variants[0]?.image || product.image,
   };
 }
