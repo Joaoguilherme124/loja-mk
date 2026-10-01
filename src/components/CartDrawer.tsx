@@ -97,6 +97,7 @@ export function CartDrawer({ whatsapp }: Props) {
       pickupDate
     );
     window.open(link, "_blank", "noopener,noreferrer");
+    clearCart();
     closeCart();
   }
 
