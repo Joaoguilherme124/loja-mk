@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
 import {
@@ -58,14 +59,22 @@ export function CartDrawer({ whatsapp }: Props) {
     clearCart,
   } = useCart();
   const router = useRouter();
+  const pathname = usePathname();
   const [pickupDate, setPickupDate] = useState("");
   const [dateError, setDateError] = useState("");
 
   const minDate = useMemo(() => todayIsoDate(), []);
 
-  function goToCatalog() {
+  useEffect(() => {
+    if (!isOpen) return;
+    router.prefetch("/catalogo");
+  }, [isOpen, router]);
+
+  function continueToCatalog(event: MouseEvent<HTMLAnchorElement>) {
     closeCart();
-    router.push("/catalogo");
+    if (pathname === "/catalogo") {
+      event.preventDefault();
+    }
   }
 
   if (!isOpen) return null;
@@ -251,7 +260,7 @@ export function CartDrawer({ whatsapp }: Props) {
                 Dia de retirada
                 <input
                   type="date"
-                  className="field"
+                  className="field max-w-full min-w-0"
                   min={minDate}
                   value={pickupDate}
                   onChange={(e) => {
@@ -285,22 +294,22 @@ export function CartDrawer({ whatsapp }: Props) {
               >
                 Pedir no WhatsApp
               </button>
-              <button
-                type="button"
+              <Link
+                href="/catalogo"
                 className="btn-ghost w-full !text-sm"
-                onClick={goToCatalog}
+                onClick={continueToCatalog}
               >
                 Continuar no catálogo
-              </button>
+              </Link>
             </>
           ) : (
-            <button
-              type="button"
+            <Link
+              href="/catalogo"
               className="btn-primary w-full"
-              onClick={goToCatalog}
+              onClick={continueToCatalog}
             >
               Continuar no catálogo
-            </button>
+            </Link>
           )}
         </div>
       </aside>

@@ -166,6 +166,8 @@ body {
 
 .field {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--cappuccino) 80%, var(--mocha));
   background: color-mix(in srgb, var(--foam) 88%, white);
   border-radius: 0.9rem;
@@ -173,6 +175,12 @@ body {
   color: var(--espresso);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="date"].field {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .field:focus {
