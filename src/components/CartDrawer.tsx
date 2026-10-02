@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
 import {
@@ -56,10 +57,16 @@ export function CartDrawer({ whatsapp }: Props) {
     setQuantity,
     clearCart,
   } = useCart();
+  const router = useRouter();
   const [pickupDate, setPickupDate] = useState("");
   const [dateError, setDateError] = useState("");
 
   const minDate = useMemo(() => todayIsoDate(), []);
+
+  function goToCatalog() {
+    closeCart();
+    router.push("/catalogo");
+  }
 
   if (!isOpen) return null;
 
@@ -281,16 +288,16 @@ export function CartDrawer({ whatsapp }: Props) {
               <button
                 type="button"
                 className="btn-ghost w-full !text-sm"
-                onClick={clearCart}
+                onClick={goToCatalog}
               >
-                Limpar pedido
+                Continuar no catálogo
               </button>
             </>
           ) : (
             <button
               type="button"
               className="btn-primary w-full"
-              onClick={closeCart}
+              onClick={goToCatalog}
             >
               Continuar no catálogo
             </button>
