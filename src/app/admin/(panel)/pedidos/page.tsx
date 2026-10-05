@@ -11,6 +11,7 @@ import {
   parseSoldBy,
 } from "@/lib/sold-by";
 import { formatPrice } from "@/lib/whatsapp";
+import { orderExtraAmount, orderGrandTotal } from "@/lib/order-totals";
 import { OrdersSchedule } from "@/components/OrdersSchedule";
 
 const statusOptions: { value: OrderStatus; label: string; color: string }[] =
@@ -44,6 +45,7 @@ const emptyCreateForm = {
   customerPhone: "",
   deliveryDate: "",
   deliveryTime: "",
+  extraAmount: "",
   notes: "",
   status: "confirmado" as OrderStatus,
   items: [{ productId: "", quantity: 1 }] as DraftItem[],
@@ -193,6 +195,7 @@ export default function AdminOrdersPage() {
           customerPhone: createForm.customerPhone,
           deliveryDate: createForm.deliveryDate,
           deliveryTime: createForm.deliveryTime,
+          extraAmount: Number(createForm.extraAmount) || 0,
           notes: createForm.notes,
           status: createForm.status,
           items,
@@ -233,8 +236,11 @@ export default function AdminOrdersPage() {
         body: JSON.stringify({
           status: editForm.status,
           notes: editForm.notes,
+          customerName: editForm.customerName,
+          customerPhone: editForm.customerPhone,
           deliveryDate: editForm.deliveryDate,
           deliveryTime: editForm.deliveryTime,
+          extraAmount: Number(editForm.extraAmount) || 0,
         }),
       });
 
@@ -515,6 +521,23 @@ export default function AdminOrdersPage() {
               />
             </label>
             <label className="block space-y-1 text-xs font-medium text-espresso">
+              Valor adicional / topo (R$)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="field !text-sm"
+                value={createForm.extraAmount}
+                onChange={(e) =>
+                  setCreateForm({
+                    ...createForm,
+                    extraAmount: e.target.value,
+                  })
+                }
+                placeholder="0,00"
+              />
+            </label>
+            <label className="block space-y-1 text-xs font-medium text-espresso">
               Status inicial
               <select
                 className="field !text-sm"
@@ -725,6 +748,36 @@ export default function AdminOrdersPage() {
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
                               <label className="text-xs font-medium text-espresso block mb-1">
+                                Cliente
+                              </label>
+                              <input
+                                className="field !text-sm"
+                                value={editForm.customerName || ""}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    customerName: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-espresso block mb-1">
+                                Telefone
+                              </label>
+                              <input
+                                className="field !text-sm"
+                                value={editForm.customerPhone || ""}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    customerPhone: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-espresso block mb-1">
                                 Status
                               </label>
                               <select
@@ -779,6 +832,30 @@ export default function AdminOrdersPage() {
                                   })
                                 }
                                 className="field !text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-espresso block mb-1">
+                                Valor adicional / topo (R$)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="field !text-sm"
+                                value={
+                                  editForm.extraAmount === undefined ||
+                                  editForm.extraAmount === null
+                                    ? ""
+                                    : String(editForm.extraAmount)
+                                }
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    extraAmount: Number(e.target.value) || 0,
+                                  })
+                                }
+                                placeholder="0,00"
                               />
                             </div>
                           </div>
@@ -843,7 +920,7 @@ export default function AdminOrdersPage() {
                             </span>
                           </div>
 
-                          <div className="grid gap-4 md:grid-cols-3 items-start mb-4">
+                          <div className="grid gap-4 md:grid-cols-2 items-start mb-4">
                             <div>
                               <p className="text-xs text-mocha mb-1">Cliente</p>
                               <p className="font-semibold text-espresso">
@@ -859,12 +936,6 @@ export default function AdminOrdersPage() {
                               <p className="text-xs text-mocha mb-1">Contato</p>
                               <p className="font-semibold text-espresso">
                                 {order.customerPhone}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-mocha mb-1">Pedido</p>
-                              <p className="font-semibold text-espresso text-xs break-all">
-                                {order.id}
                               </p>
                             </div>
                           </div>
@@ -891,11 +962,29 @@ export default function AdminOrdersPage() {
                                 </div>
                               ))}
                             </div>
-                            <div className="border-t border-cappuccino/30 mt-2 pt-2 flex justify-between text-sm font-semibold text-espresso">
-                              <span>Total:</span>
-                              <span className="text-caramel text-base">
-                                {formatPrice(order.totalPrice)}
-                              </span>
+                            <div className="border-t border-cappuccino/30 mt-2 pt-2 space-y-1 text-sm text-espresso">
+                              <div className="flex justify-between">
+                                <span>Produtos</span>
+                                <span>{formatPrice(order.totalPrice)}</span>
+                              </div>
+                              {orderExtraAmount(order) > 0 ? (
+                                <div className="flex justify-between text-espresso/80">
+                                  <span>Topo / adicional</span>
+                                  <span>
+                                    {formatPrice(orderExtraAmount(order))}
+                                  </span>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-espresso/55">
+                                  Topo / adicional ainda não informado
+                                </p>
+                              )}
+                              <div className="flex justify-between font-semibold">
+                                <span>Total</span>
+                                <span className="text-caramel text-base">
+                                  {formatPrice(orderGrandTotal(order))}
+                                </span>
+                              </div>
                             </div>
                           </div>
 

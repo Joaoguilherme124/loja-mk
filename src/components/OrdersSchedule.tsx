@@ -147,15 +147,30 @@ export function OrdersSchedule({
     setWeekAnchor((current) => addDays(current, delta * 7));
   }
 
+  function formatOrderItems(order: Order) {
+    return order.items.map((item) => {
+      const qty =
+        item.soldBy === "kg"
+          ? `${item.quantity} kg `
+          : item.quantity > 1
+            ? `${item.quantity}x `
+            : "";
+      return `${qty}${item.productName}`.trim();
+    });
+  }
+
   function blockStyle(order: Order) {
     const minutes = parseTime(order.deliveryTime)!;
     const top = ((minutes - HOUR_START * 60) / gridHeight) * 100;
-    const height = (BLOCK_MINUTES / gridHeight) * 100;
-    const clampedTop = Math.max(0, Math.min(top, 96));
+    const itemCount = Math.max(1, order.items.length);
+    const minutesTall = Math.max(BLOCK_MINUTES, 32 + itemCount * 20);
+    const height = (minutesTall / gridHeight) * 100;
+    const clampedTop = Math.max(0, Math.min(top, 90));
     const clampedHeight = Math.min(height, 100 - clampedTop);
     return {
       top: `${clampedTop}%`,
-      height: `${Math.max(clampedHeight, 4.5)}%`,
+      height: `${Math.max(clampedHeight, 7)}%`,
+      minHeight: `${Math.max(56, 36 + itemCount * 18)}px`,
     };
   }
 
@@ -224,6 +239,7 @@ export function OrdersSchedule({
           <div className="flex flex-wrap gap-2">
             {untimedOrders.map((order) => {
               const style = statusStyles[order.status];
+              const items = formatOrderItems(order);
               return (
                 <button
                   key={order.id}
@@ -233,9 +249,13 @@ export function OrdersSchedule({
                 >
                   <span className="font-semibold">{order.customerName}</span>
                   <span className="mt-0.5 block opacity-80">
-                    {(order.deliveryDate || "").split("T")[0]} ·{" "}
-                    {order.items[0]?.productName || "Pedido"}
+                    {(order.deliveryDate || "").split("T")[0]}
                   </span>
+                  <ul className="mt-1 space-y-0.5 opacity-90">
+                    {items.map((label, index) => (
+                      <li key={`${order.id}-u-${index}`}>• {label}</li>
+                    ))}
+                  </ul>
                 </button>
               );
             })}
@@ -329,26 +349,31 @@ export function OrdersSchedule({
 
                   {dayOrders.map((order) => {
                     const style = statusStyles[order.status];
-                    const productLabel =
-                      order.items.length > 1
-                        ? `${order.items[0]?.productName} +${order.items.length - 1}`
-                        : order.items[0]?.productName || "Pedido";
+                    const items = formatOrderItems(order);
+                    const title = `${order.deliveryTime} · ${order.customerName}\n${items.join("\n")}`;
 
                     return (
                       <button
                         key={order.id}
                         type="button"
                         onClick={() => onSelectOrder?.(order)}
-                        className={`absolute inset-x-1 z-10 overflow-hidden rounded-md border px-1.5 py-1 text-left shadow-sm transition hover:brightness-95 ${style.bg} ${style.border} ${style.text}`}
+                        className={`absolute inset-x-1 z-10 overflow-y-auto rounded-md border px-1.5 py-1 text-left shadow-sm transition hover:brightness-95 ${style.bg} ${style.border} ${style.text}`}
                         style={blockStyle(order)}
-                        title={`${order.customerName} · ${order.deliveryTime}`}
+                        title={title}
                       >
-                        <p className="truncate text-[11px] font-semibold leading-tight">
+                        <p className="text-[11px] font-semibold leading-tight break-words">
                           {order.deliveryTime} · {order.customerName}
                         </p>
-                        <p className="truncate text-[10px] leading-tight opacity-80">
-                          {productLabel}
-                        </p>
+                        <ul className="mt-0.5 space-y-0.5 text-[10px] leading-snug opacity-90">
+                          {items.map((label, index) => (
+                            <li
+                              key={`${order.id}-${index}`}
+                              className="break-words"
+                            >
+                              • {label}
+                            </li>
+                          ))}
+                        </ul>
                       </button>
                     );
                   })}

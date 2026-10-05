@@ -38,6 +38,7 @@ type OrderRow = QueryResultRow & {
   customerPhone: string;
   items: string | Order["items"];
   total: number | string;
+  extraAmount?: number | string | null;
   status: Order["status"];
   notes: string;
   deliveryDate: string;
@@ -151,6 +152,10 @@ async function initializeDatabase(): Promise<void> {
     ALTER TABLE settings
     ADD COLUMN IF NOT EXISTS "tortaSizes" TEXT NULL
   `);
+  await db.query(`
+    ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS "extraAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0
+  `);
 
   const settings = await db.query('SELECT id FROM settings WHERE id = 1');
   if (settings.rowCount === 0) {
@@ -239,6 +244,7 @@ export async function readDatabase(): Promise<DatabaseData> {
           ? (JSON.parse(order.items) as Order["items"])
           : order.items ?? [],
       totalPrice: Number(order.total),
+      extraAmount: Number(order.extraAmount) || 0,
       createdAt: new Date(order.createdAt).toISOString(),
       updatedAt: new Date(order.updatedAt).toISOString(),
     })),
@@ -310,8 +316,23 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
     }
     for (const order of data.orders) {
       await client.query(
-        'INSERT INTO orders (id, "userId", "customerName", "customerEmail", "customerPhone", items, total, status, notes, "deliveryDate", "deliveryTime", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
-        [order.id, order.userId, order.customerName, order.customerEmail, order.customerPhone, JSON.stringify(order.items), order.totalPrice, order.status, order.notes, order.deliveryDate, order.deliveryTime ?? "", order.createdAt, order.updatedAt]
+        'INSERT INTO orders (id, "userId", "customerName", "customerEmail", "customerPhone", items, total, "extraAmount", status, notes, "deliveryDate", "deliveryTime", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)',
+        [
+          order.id,
+          order.userId,
+          order.customerName,
+          order.customerEmail,
+          order.customerPhone,
+          JSON.stringify(order.items),
+          order.totalPrice,
+          Number(order.extraAmount) || 0,
+          order.status,
+          order.notes,
+          order.deliveryDate,
+          order.deliveryTime ?? "",
+          order.createdAt,
+          order.updatedAt,
+        ]
       );
     }
     await client.query("COMMIT");

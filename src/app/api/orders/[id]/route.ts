@@ -43,9 +43,19 @@ export async function PUT(
 
     if (body.status) order.status = body.status;
     if (body.notes !== undefined) order.notes = body.notes;
+    if (body.customerName !== undefined) {
+      order.customerName = String(body.customerName || "").trim() || order.customerName;
+    }
+    if (body.customerPhone !== undefined) {
+      order.customerPhone = String(body.customerPhone || "").trim();
+    }
     if (body.deliveryDate) order.deliveryDate = body.deliveryDate;
     if (body.deliveryTime !== undefined) {
       order.deliveryTime = String(body.deliveryTime || "").trim();
+    }
+    if (body.extraAmount !== undefined) {
+      const extra = Number(body.extraAmount);
+      order.extraAmount = Number.isFinite(extra) && extra > 0 ? extra : 0;
     }
     order.updatedAt = new Date().toISOString();
 

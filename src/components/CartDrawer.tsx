@@ -62,6 +62,10 @@ export function CartDrawer({ whatsapp }: Props) {
   const pathname = usePathname();
   const [pickupDate, setPickupDate] = useState("");
   const [dateError, setDateError] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const minDate = useMemo(() => todayIsoDate(), []);
 
@@ -90,7 +94,7 @@ export function CartDrawer({ whatsapp }: Props) {
         }
       : undefined;
 
-  function openWhatsApp() {
+  async function openWhatsApp() {
     if (!pickupDate) {
       setDateError("Escolha o dia de retirada");
       return;
@@ -99,22 +103,76 @@ export function CartDrawer({ whatsapp }: Props) {
       setDateError(PICKUP_DATE_BLOCKED);
       return;
     }
+    const name = customerName.trim();
+    const phone = customerPhone.replace(/\D/g, "");
+    if (!name) {
+      setSubmitError("Informe seu nome.");
+      return;
+    }
+    if (phone.length < 10) {
+      setSubmitError("Informe um WhatsApp válido com DDD.");
+      return;
+    }
+
     setDateError("");
-    const link = buildCartWhatsAppLink(
-      whatsapp,
-      items.map((item) => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        soldBy: item.soldBy,
-      })),
-      undefined,
-      promoPayload,
-      pickupDate
-    );
-    window.open(link, "_blank", "noopener,noreferrer");
-    clearCart();
-    closeCart();
+    setSubmitError("");
+    setSending(true);
+
+    const cartItems = items.map((item) => ({
+      productId: item.productId,
+      productName: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      soldBy: item.soldBy,
+      variantId: item.variantId,
+    }));
+
+    try {
+      const res = await fetch("/api/orders/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: name,
+          customerPhone: phone,
+          deliveryDate: pickupDate,
+          totalPrice: total,
+          items: cartItems,
+          notes:
+            discount > 0 && promo
+              ? `Promo ${promo.title} (${promo.discountLabel})`
+              : "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Não foi possível registrar o pedido.");
+      }
+
+      const link = buildCartWhatsAppLink(
+        whatsapp,
+        items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          soldBy: item.soldBy,
+        })),
+        `Cliente: ${name} · Contato: ${phone}`,
+        promoPayload,
+        pickupDate
+      );
+      window.open(link, "_blank", "noopener,noreferrer");
+      clearCart();
+      setPickupDate("");
+      setCustomerName("");
+      setCustomerPhone("");
+      closeCart();
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Erro ao enviar pedido"
+      );
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -257,6 +315,34 @@ export function CartDrawer({ whatsapp }: Props) {
           {items.length > 0 ? (
             <>
               <label className="block space-y-2 text-sm font-medium text-espresso">
+                Seu nome
+                <input
+                  className="field max-w-full min-w-0"
+                  value={customerName}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    setSubmitError("");
+                  }}
+                  placeholder="Como devemos chamar você"
+                  autoComplete="name"
+                />
+              </label>
+              <label className="block space-y-2 text-sm font-medium text-espresso">
+                Seu WhatsApp
+                <input
+                  className="field max-w-full min-w-0"
+                  type="tel"
+                  inputMode="numeric"
+                  value={customerPhone}
+                  onChange={(e) => {
+                    setCustomerPhone(e.target.value.replace(/\D/g, ""));
+                    setSubmitError("");
+                  }}
+                  placeholder="DDD + número"
+                  autoComplete="tel"
+                />
+              </label>
+              <label className="block space-y-2 text-sm font-medium text-espresso">
                 Dia de retirada
                 <input
                   type="date"
@@ -281,18 +367,23 @@ export function CartDrawer({ whatsapp }: Props) {
                   required
                 />
                 <span className="block text-xs font-normal text-espresso/60">
-                  {PICKUP_DATE_HINT}
+                  {PICKUP_DATE_HINT} Horário e valor do topo confirmamos no
+                  WhatsApp.
                 </span>
               </label>
               {dateError ? (
                 <p className="text-sm text-red-800">{dateError}</p>
               ) : null}
+              {submitError ? (
+                <p className="text-sm text-red-800">{submitError}</p>
+              ) : null}
               <button
                 type="button"
                 className="btn-primary w-full"
                 onClick={openWhatsApp}
+                disabled={sending}
               >
-                Pedir no WhatsApp
+                {sending ? "Registrando..." : "Pedir no WhatsApp"}
               </button>
               <Link
                 href="/catalogo"

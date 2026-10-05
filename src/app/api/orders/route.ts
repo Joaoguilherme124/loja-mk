@@ -126,6 +126,7 @@ export async function POST(request: Request) {
     const deliveryDate = String(body.deliveryDate || "").trim();
     const deliveryTime = String(body.deliveryTime || "").trim();
     const notes = String(body.notes || "").trim();
+    const extraAmount = Math.max(0, Number(body.extraAmount) || 0);
 
     const allowedStatus = [
       "pendente",
@@ -157,6 +158,7 @@ export async function POST(request: Request) {
       customerPhone,
       items,
       totalPrice,
+      extraAmount,
       status,
       notes,
       deliveryDate: deliveryDate || new Date().toISOString().slice(0, 10),

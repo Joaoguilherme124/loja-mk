@@ -75,7 +75,9 @@ export function buildCartWhatsAppLink(
     ? `\n\n*Retirada:* ${formatPickupDate(pickupDate.trim())}`
     : "";
   const noteBlock = note?.trim() ? `\n\nObs: ${note.trim()}` : "";
-  const message = `Olá! Quero fazer este pedido:\n\n${lines.join("\n")}\n\n${totalsBlock}${pickupBlock}${noteBlock}\n\nPode confirmar?`;
+  const confirmBlock =
+    "\n\nHorário de retirada e valor de topo (se houver) confirmamos no WhatsApp.";
+  const message = `Olá! Quero fazer este pedido:\n\n${lines.join("\n")}\n\n${totalsBlock}${pickupBlock}${noteBlock}${confirmBlock}\n\nPode confirmar?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 

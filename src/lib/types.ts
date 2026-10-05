@@ -107,6 +107,8 @@ export type Order = {
   customerPhone: string;
   items: OrderItem[];
   totalPrice: number;
+  /** Valor adicional (ex.: topo/decoração). */
+  extraAmount?: number;
   status: OrderStatus;
   notes: string;
   deliveryDate: string;
