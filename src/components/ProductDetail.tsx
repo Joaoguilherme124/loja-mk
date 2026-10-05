@@ -58,6 +58,7 @@ function TortaDetail({
   const [massa, setMassa] = useState<TortaMassa>("tradicional");
   const [selected, setSelected] = useState<TortaFlavorOption[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [flavorError, setFlavorError] = useState("");
   const { addItem } = useCart();
 
   const sizesKey = sizes
@@ -100,6 +101,7 @@ function TortaDetail({
   );
 
   function toggleFlavor(flavor: TortaFlavorOption) {
+    setFlavorError("");
     setSelected((current) => {
       const exists = current.some((entry) => entry.id === flavor.id);
       if (exists) return current.filter((entry) => entry.id !== flavor.id);
@@ -108,6 +110,31 @@ function TortaDetail({
       }
       return [...current, flavor];
     });
+  }
+
+  function handleAddToCart() {
+    if (selected.length < 1) {
+      setFlavorError("Selecione no mínimo um sabor");
+      return;
+    }
+    if (!canAdd) return;
+    setFlavorError("");
+    addItem(
+      {
+        productId: product.id,
+        variantId: buildTortaVariantId({
+          cm: size.cm,
+          massa,
+          flavorIds: selected.map((flavor) => flavor.id),
+        }),
+        name: displayName,
+        price: unitPrice,
+        image,
+        soldBy: "unit",
+        kind: "tortas",
+      },
+      quantity
+    );
   }
 
   function renderFlavorGroup(
@@ -292,35 +319,26 @@ function TortaDetail({
           <button
             type="button"
             className="btn-primary w-full"
-            disabled={!canAdd}
-            onClick={() =>
-              addItem(
-                {
-                  productId: product.id,
-                  variantId: buildTortaVariantId({
-                    cm: size.cm,
-                    massa,
-                    flavorIds: selected.map((flavor) => flavor.id),
-                  }),
-                  name: displayName,
-                  price: unitPrice,
-                  image,
-                  soldBy: "unit",
-                  kind: "tortas",
-                },
-                quantity
-              )
-            }
+            onClick={handleAddToCart}
           >
             Adicionar ao pedido
           </button>
+          {flavorError ? (
+            <p className="text-sm text-red-700">{flavorError}</p>
+          ) : null}
 
           <a
-            href={link}
+            href={canAdd ? link : undefined}
             target="_blank"
             rel="noopener noreferrer"
-            className={`btn-ghost w-full ${!canAdd ? "pointer-events-none opacity-50" : ""}`}
+            className={`btn-ghost w-full ${!canAdd ? "opacity-50" : ""}`}
             aria-disabled={!canAdd}
+            onClick={(event) => {
+              if (!canAdd) {
+                event.preventDefault();
+                setFlavorError("Selecione no mínimo um sabor");
+              }
+            }}
           >
             Pedir só este no WhatsApp
           </a>

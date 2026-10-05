@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductCard } from "@/components/ProductCard";
+import { CatalogProductTabs } from "@/components/CatalogProductTabs";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
@@ -37,22 +37,7 @@ export default async function CatalogPage() {
       </div>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-12 md:px-8">
-        {products.length === 0 ? (
-          <p className="rounded-2xl border border-cappuccino/60 bg-foam/60 p-8 text-espresso/80">
-            Nenhum produto publicado ainda. A empreendedora pode adicionar itens
-            no painel.
-          </p>
-        ) : (
-          <div className="divide-y divide-cappuccino/40 rounded-[1.4rem] border border-cappuccino/50 bg-foam/70 px-4 py-2 md:px-6 md:py-3">
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                tortaSizes={tortaSizes}
-              />
-            ))}
-          </div>
-        )}
+        <CatalogProductTabs products={products} tortaSizes={tortaSizes} />
       </main>
 
       <SiteFooter storeName={store.settings.storeName} />
