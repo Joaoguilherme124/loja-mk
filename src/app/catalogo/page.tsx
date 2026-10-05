@@ -3,6 +3,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
+import { resolveTortaSizes } from "@/lib/product-kind";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function CatalogPage() {
   const store = await readStore();
   const products = store.products.filter((p) => p.active);
+  const tortaSizes = resolveTortaSizes(store.settings);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -43,7 +45,11 @@ export default async function CatalogPage() {
         ) : (
           <div className="divide-y divide-cappuccino/40 rounded-[1.4rem] border border-cappuccino/50 bg-foam/70 px-4 py-2 md:px-6 md:py-3">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                tortaSizes={tortaSizes}
+              />
             ))}
           </div>
         )}

@@ -1,4 +1,6 @@
-import type { Product, ProductKind, ProductVariant } from "./types";
+import type { Product, ProductKind, ProductVariant, TortaSizeOption } from "./types";
+
+export type { TortaSizeOption };
 
 export const DOCINHO_SIZE = "Unidade";
 
@@ -9,16 +11,58 @@ export const TORTA_MAX_FLAVORS = 2;
 
 export type TortaMassa = "tradicional" | "chocolate";
 
-export const TORTA_SIZES = [
+export const DEFAULT_TORTA_SIZES: TortaSizeOption[] = [
   { cm: 15, kg: 1.5, fatias: "8 a 10" },
   { cm: 18, kg: 1.8, fatias: "12 a 15" },
   { cm: 20, kg: 2.5, fatias: "23 a 25" },
   { cm: 23, kg: 3.5, fatias: "30 a 35" },
   { cm: 25, kg: 4.5, fatias: "40 a 45" },
   { cm: 30, kg: 5.5, fatias: "50 a 55" },
-] as const;
+];
 
-export type TortaSizeOption = (typeof TORTA_SIZES)[number];
+/** Alias do padrão — preferir resolveTortaSizes(settings) no runtime. */
+export const TORTA_SIZES = DEFAULT_TORTA_SIZES;
+
+function cloneDefaults() {
+  return DEFAULT_TORTA_SIZES.map((option) => ({ ...option }));
+}
+
+export function normalizeTortaSizes(raw: unknown): TortaSizeOption[] {
+  if (!Array.isArray(raw) || raw.length === 0) return cloneDefaults();
+
+  const parsed: TortaSizeOption[] = [];
+  const seen = new Set<number>();
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const cm = Number(
+      String((item as { cm?: unknown }).cm ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+    const kg = Number(
+      String((item as { kg?: unknown }).kg ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+    const fatias = String((item as { fatias?: unknown }).fatias ?? "").trim();
+    if (!Number.isFinite(cm) || cm <= 0) continue;
+    if (!Number.isFinite(kg) || kg <= 0) continue;
+    if (!fatias) continue;
+    if (seen.has(cm)) continue;
+    seen.add(cm);
+    parsed.push({ cm, kg, fatias });
+  }
+
+  if (parsed.length === 0) return cloneDefaults();
+  return parsed.sort((a, b) => a.cm - b.cm);
+}
+
+export function resolveTortaSizes(settings?: {
+  tortaSizes?: unknown;
+} | null) {
+  return normalizeTortaSizes(settings?.tortaSizes);
+}
 
 export function parseProductKind(value: unknown): ProductKind {
   if (value === "docinhos") return "docinhos";
@@ -73,9 +117,12 @@ export function tortaSizeLabel(option: Pick<TortaSizeOption, "cm" | "kg" | "fati
   return `${option.cm} cm · ${kg} kg · ${option.fatias} fatias`;
 }
 
-export function findTortaSizeByCm(cm: string | number) {
+export function findTortaSizeByCm(
+  cm: string | number,
+  sizes: TortaSizeOption[] = DEFAULT_TORTA_SIZES
+) {
   const value = Number(String(cm).trim().replace(",", "."));
-  return TORTA_SIZES.find((option) => option.cm === value) || null;
+  return sizes.find((option) => option.cm === value) || null;
 }
 
 export function getTortaRates(product: Pick<Product, "price" | "variants">) {
@@ -161,9 +208,13 @@ export function calcTortaTotal(options: {
 }
 
 /** Preço de vitrine: menor tamanho × kg tradicional (sem chocolate). */
-export function tortaCatalogFromPrice(product: Pick<Product, "price" | "variants">) {
+export function tortaCatalogFromPrice(
+  product: Pick<Product, "price" | "variants">,
+  sizes: TortaSizeOption[] = DEFAULT_TORTA_SIZES
+) {
   const rates = getTortaRates(product);
-  const smallest = TORTA_SIZES[0];
+  const list = sizes.length > 0 ? sizes : DEFAULT_TORTA_SIZES;
+  const smallest = list[0];
   return calcTortaTotal({
     kg: smallest.kg,
     ratePerKg: rates.traditional,

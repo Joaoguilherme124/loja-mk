@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { GalleryUploader } from "@/components/GalleryUploader";
 import { ImageUploader } from "@/components/ImageUploader";
+import { TortaSizesEditor } from "@/components/TortaSizesEditor";
 import {
   flavorsFromVariants,
   getTortaFlavors,
@@ -12,8 +13,6 @@ import {
   kindCategory,
   resolveFormKind,
   TORTA_CHOCOLATE_EXTRA_PER_KG,
-  TORTA_SIZES,
-  tortaSizeLabel,
   variantsFromFlavors,
   variantsFromTortaFlavors,
 } from "@/lib/product-kind";
@@ -653,14 +652,10 @@ export default function AdminProductsPage() {
               </div>
               <p className="text-sm text-espresso/70">
                 Massa de chocolate: +{" "}
-                {formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg. Tamanhos fixos
-                para o cliente:
+                {formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg. Tamanhos
+                disponíveis para o cliente (edite aqui):
               </p>
-              <ul className="grid gap-1 text-sm text-espresso/75 sm:grid-cols-2">
-                {TORTA_SIZES.map((option) => (
-                  <li key={option.cm}>• {tortaSizeLabel(option)}</li>
-                ))}
-              </ul>
+              <TortaSizesEditor />
             </div>
           ) : (
             <p className="text-sm text-espresso/70 md:col-span-2">

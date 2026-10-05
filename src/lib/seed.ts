@@ -1,4 +1,5 @@
 import { StoreData } from "./types";
+import { DEFAULT_TORTA_SIZES } from "./product-kind";
 
 export const defaultStore: StoreData = {
   settings: {
@@ -7,6 +8,7 @@ export const defaultStore: StoreData = {
     whatsapp: "5511999999999",
     about:
       "Uma loja acolhedora para descobrir novidades, promoções e encomendar pelo WhatsApp com facilidade.",
+    tortaSizes: DEFAULT_TORTA_SIZES.map((option) => ({ ...option })),
   },
   products: [
     {

@@ -1,10 +1,14 @@
 import { readDatabase, writeDatabase } from "./database";
+import { resolveTortaSizes } from "./product-kind";
 import type { StoreData } from "./types";
 
 export async function readStore(): Promise<StoreData> {
   const data = await readDatabase();
   return {
-    settings: data.settings,
+    settings: {
+      ...data.settings,
+      tortaSizes: resolveTortaSizes(data.settings),
+    },
     products: data.products,
     promotions: data.promotions,
     news: data.news,

@@ -48,11 +48,19 @@ export type NewsItem = {
   createdAt: string;
 };
 
+export type TortaSizeOption = {
+  cm: number;
+  kg: number;
+  fatias: string;
+};
+
 export type StoreSettings = {
   storeName: string;
   tagline: string;
   whatsapp: string;
   about: string;
+  /** Tamanhos de torta (cm / kg / fatias). Se vazio, usa o padrão do sistema. */
+  tortaSizes?: TortaSizeOption[];
 };
 
 export type StoreData = {

@@ -8,16 +8,17 @@ import { displayPrice, hasVariants } from "@/lib/product-variants";
 import { isDocinhosProduct, isTortasProduct } from "@/lib/product-kind";
 import { productGallery } from "@/lib/product-images";
 import { formatRate, parseSoldBy } from "@/lib/sold-by";
-import type { Product } from "@/lib/types";
+import type { Product, TortaSizeOption } from "@/lib/types";
 import { formatPrice } from "@/lib/whatsapp";
 
 type Props = {
   product: Product;
+  tortaSizes?: TortaSizeOption[];
 };
 
-export function ProductCard({ product }: Props) {
+export function ProductCard({ product, tortaSizes }: Props) {
   const { addItem } = useCart();
-  const price = displayPrice(product);
+  const price = displayPrice(product, tortaSizes);
   const withOptions = hasVariants(product);
   const docinhos = isDocinhosProduct(product);
   const tortas = isTortasProduct(product);

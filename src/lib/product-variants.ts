@@ -4,7 +4,7 @@ import {
   tortaCatalogFromPrice,
 } from "./product-kind";
 import { withSyncedImages } from "./product-images";
-import type { Product, ProductVariant } from "./types";
+import type { Product, ProductVariant, TortaSizeOption } from "./types";
 
 export function parseVariants(raw: unknown): ProductVariant[] {
   if (!raw) return [];
@@ -57,9 +57,12 @@ export function uniqueStyles(product: Product) {
   );
 }
 
-export function displayPrice(product: Product) {
+export function displayPrice(
+  product: Product,
+  tortaSizes?: TortaSizeOption[]
+) {
   if (isTortasProduct(product)) {
-    return tortaCatalogFromPrice(product);
+    return tortaCatalogFromPrice(product, tortaSizes);
   }
   const variants = product.variants || [];
   if (variants.length === 0) return product.price;

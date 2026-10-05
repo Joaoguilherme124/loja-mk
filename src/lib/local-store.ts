@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { defaultStore } from "./seed";
 import { parseSoldBy } from "./sold-by";
-import { parseProductKind } from "./product-kind";
+import { parseProductKind, resolveTortaSizes } from "./product-kind";
 import { parseImages } from "./product-images";
 import type { Order, Product, StoreData, User } from "./types";
 
@@ -25,8 +25,16 @@ function withDefaults(raw: Partial<LocalDatabaseData> | null): LocalDatabaseData
     }
   );
 
+  const settingsRaw = raw?.settings || defaultStore.settings;
+
   return {
-    settings: raw?.settings || defaultStore.settings,
+    settings: {
+      storeName: String(settingsRaw.storeName || defaultStore.settings.storeName),
+      tagline: String(settingsRaw.tagline || ""),
+      whatsapp: String(settingsRaw.whatsapp || ""),
+      about: String(settingsRaw.about || ""),
+      tortaSizes: resolveTortaSizes(settingsRaw),
+    },
     products,
     promotions: raw?.promotions || defaultStore.promotions,
     news: raw?.news || defaultStore.news,

@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
 import { readStore } from "@/lib/store";
+import { resolveTortaSizes } from "@/lib/product-kind";
 import { buildGeneralWhatsAppLink } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function HomePage() {
   const promotions = store.promotions.filter((p) => p.active).slice(0, 1);
   const news = store.news.filter((n) => n.active).slice(0, 2);
   const heroImage = "/hero-mk-gourmet.jpg";
+  const tortaSizes = resolveTortaSizes(store.settings);
 
   const activeProducts = store.products.filter((p) => p.active);
   const bolo =
@@ -128,7 +130,11 @@ export default async function HomePage() {
             </div>
             <div className="divide-y divide-cappuccino/40 rounded-[1.4rem] border border-cappuccino/50 bg-foam/70 px-4 py-2 md:px-6 md:py-3">
               {featured.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  tortaSizes={tortaSizes}
+                />
               ))}
             </div>
           </div>

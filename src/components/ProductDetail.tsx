@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import { ImageCarousel } from "@/components/ImageCarousel";
 import { SafeImage } from "@/components/SafeImage";
@@ -15,6 +15,7 @@ import {
   buildTortaCartLabel,
   buildTortaVariantId,
   calcTortaTotal,
+  DEFAULT_TORTA_SIZES,
   getTortaFlavors,
   getTortaRates,
   isDocinhosProduct,
@@ -22,10 +23,8 @@ import {
   resolveTortaRatePerKg,
   TORTA_CHOCOLATE_EXTRA_PER_KG,
   TORTA_MAX_FLAVORS,
-  TORTA_SIZES,
   type TortaFlavorOption,
   type TortaMassa,
-  type TortaSizeOption,
 } from "@/lib/product-kind";
 import { productGallery } from "@/lib/product-images";
 import {
@@ -38,21 +37,41 @@ import {
   quantityStep,
 } from "@/lib/sold-by";
 import { buildWhatsAppLink, formatPrice } from "@/lib/whatsapp";
-import type { Product } from "@/lib/types";
+import type { Product, TortaSizeOption } from "@/lib/types";
 
 type Props = {
   product: Product;
   whatsapp: string;
+  tortaSizes?: TortaSizeOption[];
 };
 
-function TortaDetail({ product, whatsapp }: Props) {
+function TortaDetail({
+  product,
+  whatsapp,
+  tortaSizes = DEFAULT_TORTA_SIZES,
+}: Props) {
+  const sizes =
+    tortaSizes && tortaSizes.length > 0 ? tortaSizes : DEFAULT_TORTA_SIZES;
   const rates = getTortaRates(product);
   const groups = getTortaFlavors(product);
-  const [size, setSize] = useState<TortaSizeOption>(TORTA_SIZES[0]);
+  const [size, setSize] = useState<TortaSizeOption>(sizes[0]);
   const [massa, setMassa] = useState<TortaMassa>("tradicional");
   const [selected, setSelected] = useState<TortaFlavorOption[]>([]);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
+
+  const sizesKey = sizes
+    .map((option) => `${option.cm}:${option.kg}:${option.fatias}`)
+    .join("|");
+
+  useEffect(() => {
+    setSize((current) => {
+      const stillExists = sizes.some((option) => option.cm === current.cm);
+      return stillExists ? current : sizes[0];
+    });
+    // sizesKey captura mudanças reais da lista
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizesKey]);
 
   const ratePerKg = resolveTortaRatePerKg(rates, selected);
   const unitPrice = calcTortaTotal({
@@ -169,7 +188,7 @@ function TortaDetail({ product, whatsapp }: Props) {
               Circunferência
             </p>
             <div className="flex flex-wrap gap-2">
-              {TORTA_SIZES.map((option) => (
+              {sizes.map((option) => (
                 <button
                   key={option.cm}
                   type="button"
@@ -568,9 +587,15 @@ function DefaultProductDetail({ product, whatsapp }: Props) {
   );
 }
 
-export function ProductDetail({ product, whatsapp }: Props) {
+export function ProductDetail({ product, whatsapp, tortaSizes }: Props) {
   if (isTortasProduct(product)) {
-    return <TortaDetail product={product} whatsapp={whatsapp} />;
+    return (
+      <TortaDetail
+        product={product}
+        whatsapp={whatsapp}
+        tortaSizes={tortaSizes}
+      />
+    );
   }
   return <DefaultProductDetail product={product} whatsapp={whatsapp} />;
 }

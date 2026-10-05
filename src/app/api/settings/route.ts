@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { normalizeTortaSizes, resolveTortaSizes } from "@/lib/product-kind";
 import { readStore, writeStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +11,15 @@ function onlyDigits(value: unknown) {
 
 export async function GET() {
   const store = await readStore();
-  return NextResponse.json(store.settings, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  return NextResponse.json(
+    {
+      ...store.settings,
+      tortaSizes: resolveTortaSizes(store.settings),
+    },
+    {
+      headers: { "Cache-Control": "no-store" },
+    }
+  );
 }
 
 export async function PUT(request: Request) {
@@ -35,6 +42,10 @@ export async function PUT(request: Request) {
   const whatsapp = onlyDigits(
     body.whatsapp !== undefined ? body.whatsapp : store.settings.whatsapp
   );
+  const tortaSizes =
+    body.tortaSizes !== undefined
+      ? normalizeTortaSizes(body.tortaSizes)
+      : resolveTortaSizes(store.settings);
 
   if (!storeName) {
     return NextResponse.json(
@@ -53,16 +64,30 @@ export async function PUT(request: Request) {
     );
   }
 
+  if (!tortaSizes.length) {
+    return NextResponse.json(
+      { error: "Informe pelo menos um tamanho de torta." },
+      { status: 400 }
+    );
+  }
+
   store.settings = {
     storeName,
     tagline,
     whatsapp,
     about,
+    tortaSizes,
   };
 
   await writeStore(store);
 
-  return NextResponse.json(store.settings, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  return NextResponse.json(
+    {
+      ...store.settings,
+      tortaSizes: resolveTortaSizes(store.settings),
+    },
+    {
+      headers: { "Cache-Control": "no-store" },
+    }
+  );
 }
