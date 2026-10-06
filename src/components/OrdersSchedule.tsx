@@ -92,6 +92,17 @@ function monthTitle(weekStart: Date) {
   return `${startLabel} – ${endLabel}`;
 }
 
+function formatCalendarDate(isoDate: string) {
+  const match = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return isoDate;
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function orderDateKey(order: Order) {
+  const match = String(order.deliveryDate || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
 export function OrdersSchedule({
   orders,
   onSelectOrder,
@@ -122,7 +133,7 @@ export function OrdersSchedule({
   const weekOrders = useMemo(() => {
     return orders.filter((order) => {
       if (order.status === "cancelado") return false;
-      const dateKey = (order.deliveryDate || "").split("T")[0];
+      const dateKey = orderDateKey(order);
       return Boolean(dateKey && weekKeys.has(dateKey));
     });
   }, [orders, weekKeys]);
@@ -249,7 +260,7 @@ export function OrdersSchedule({
                 >
                   <span className="font-semibold">{order.customerName}</span>
                   <span className="mt-0.5 block opacity-80">
-                    {(order.deliveryDate || "").split("T")[0]}
+                    {formatCalendarDate(orderDateKey(order))}
                   </span>
                   <ul className="mt-1 space-y-0.5 opacity-90">
                     {items.map((label, index) => (
@@ -312,8 +323,7 @@ export function OrdersSchedule({
             {weekDays.map((day) => {
               const dateKey = toDateKey(day);
               const dayOrders = timedOrders.filter(
-                (order) =>
-                  (order.deliveryDate || "").split("T")[0] === dateKey
+                (order) => orderDateKey(order) === dateKey
               );
               const isToday = dateKey === todayKey;
 

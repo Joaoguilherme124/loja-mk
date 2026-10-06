@@ -39,7 +39,11 @@ function withDefaults(raw: Partial<LocalDatabaseData> | null): LocalDatabaseData
     promotions: raw?.promotions || defaultStore.promotions,
     news: raw?.news || defaultStore.news,
     users: raw?.users || [],
-    orders: raw?.orders || [],
+    orders: (raw?.orders || []).map((order) => ({
+      ...order,
+      deliveryDate: String(order.deliveryDate || "")
+        .match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || String(order.deliveryDate || ""),
+    })),
   };
 }
 

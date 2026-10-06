@@ -311,11 +311,12 @@ export default function AdminOrdersPage() {
     }
   }
 
+  /** Formata só o calendário (YYYY-MM-DD), sem fuso UTC. */
   function formatDelivery(date: string) {
     if (!date) return "—";
-    const parsed = new Date(date.includes("T") ? date : `${date}T12:00:00`);
-    if (Number.isNaN(parsed.getTime())) return date;
-    return parsed.toLocaleDateString("pt-BR");
+    const match = String(date).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+    return date;
   }
 
   function formatPickup(order: Order) {

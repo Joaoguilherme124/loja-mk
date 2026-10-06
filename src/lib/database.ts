@@ -49,6 +49,20 @@ type OrderRow = QueryResultRow & {
 
 export type DatabaseData = StoreData & { users: User[]; orders: Order[] };
 
+/** Garante data de calendário YYYY-MM-DD (sem deslocar por fuso UTC). */
+function toDateOnly(value: unknown): string {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(value.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  const raw = String(value);
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : raw;
+}
+
 function useLocalStore() {
   return !process.env.DATABASE_URL;
 }
@@ -245,6 +259,8 @@ export async function readDatabase(): Promise<DatabaseData> {
           : order.items ?? [],
       totalPrice: Number(order.total),
       extraAmount: Number(order.extraAmount) || 0,
+      deliveryDate: toDateOnly(order.deliveryDate),
+      deliveryTime: String(order.deliveryTime || ""),
       createdAt: new Date(order.createdAt).toISOString(),
       updatedAt: new Date(order.updatedAt).toISOString(),
     })),
@@ -328,7 +344,7 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
           Number(order.extraAmount) || 0,
           order.status,
           order.notes,
-          order.deliveryDate,
+          toDateOnly(order.deliveryDate) || null,
           order.deliveryTime ?? "",
           order.createdAt,
           order.updatedAt,
