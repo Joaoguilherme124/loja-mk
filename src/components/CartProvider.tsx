@@ -179,7 +179,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
         return [...current, { ...item, soldBy, kind, quantity: qty }];
       });
-      setIsOpen(true);
     },
     []
   );

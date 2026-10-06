@@ -180,11 +180,11 @@ export function CartDrawer({ whatsapp }: Props) {
       <button
         type="button"
         className="absolute inset-0 bg-espresso/45 backdrop-blur-[2px]"
-        aria-label="Fechar pedido"
+        aria-label="Minimizar carrinho"
         onClick={closeCart}
       />
       <aside className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-cappuccino/40 bg-foam shadow-[0_24px_60px_rgba(59,42,34,0.28)]">
-        <div className="flex items-start justify-between gap-3 border-b border-cappuccino/40 px-5 py-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-cappuccino/40 px-5 py-5">
           <div>
             <h2 className="font-display text-3xl text-espresso">Seu pedido</h2>
             <p className="mt-1 text-sm text-espresso/65">
@@ -194,13 +194,13 @@ export function CartDrawer({ whatsapp }: Props) {
           <button
             type="button"
             onClick={closeCart}
-            className="rounded-full px-3 py-1 text-sm text-espresso/70 hover:bg-cappuccino/20"
+            className="shrink-0 rounded-full border border-red-600 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
           >
-            Fechar
+            Minimizar carrinho
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {items.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-cappuccino/50 bg-white/40 p-5 text-sm text-espresso/70">
               Seu pedido ainda está vazio. Adicione produtos do catálogo.
@@ -289,11 +289,77 @@ export function CartDrawer({ whatsapp }: Props) {
                   </div>
                 );
               })}
+
+              <div className="space-y-3 border-t border-cappuccino/40 pt-4">
+                <label className="block space-y-2 text-sm font-medium text-espresso">
+                  Seu nome
+                  <input
+                    className="field max-w-full min-w-0"
+                    value={customerName}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      setSubmitError("");
+                    }}
+                    placeholder="Como devemos chamar você"
+                    autoComplete="name"
+                  />
+                </label>
+                <label className="block space-y-2 text-sm font-medium text-espresso">
+                  Seu WhatsApp
+                  <input
+                    className="field max-w-full min-w-0"
+                    type="tel"
+                    inputMode="numeric"
+                    value={customerPhone}
+                    onChange={(e) => {
+                      setCustomerPhone(e.target.value.replace(/\D/g, ""));
+                      setSubmitError("");
+                    }}
+                    placeholder="DDD + número"
+                    autoComplete="tel"
+                  />
+                </label>
+                <label className="block space-y-2 text-sm font-medium text-espresso">
+                  Dia de retirada
+                  <input
+                    type="date"
+                    className="field max-w-full min-w-0"
+                    min={minDate}
+                    value={pickupDate}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (!value) {
+                        setPickupDate("");
+                        setDateError("");
+                        return;
+                      }
+                      if (!isAllowedPickupDate(value)) {
+                        setPickupDate("");
+                        setDateError(PICKUP_DATE_BLOCKED);
+                        return;
+                      }
+                      setPickupDate(value);
+                      setDateError("");
+                    }}
+                    required
+                  />
+                  <span className="block text-xs font-normal text-espresso/60">
+                    {PICKUP_DATE_HINT} Horário e valor do topo confirmamos no
+                    WhatsApp.
+                  </span>
+                </label>
+                {dateError ? (
+                  <p className="text-sm text-red-800">{dateError}</p>
+                ) : null}
+                {submitError ? (
+                  <p className="text-sm text-red-800">{submitError}</p>
+                ) : null}
+              </div>
             </>
           )}
         </div>
 
-        <div className="space-y-3 border-t border-cappuccino/40 px-5 py-5">
+        <div className="shrink-0 space-y-3 border-t border-cappuccino/40 px-5 py-4">
           {discount > 0 ? (
             <div className="space-y-1 text-sm">
               <div className="flex items-center justify-between text-espresso/70">
@@ -314,69 +380,6 @@ export function CartDrawer({ whatsapp }: Props) {
           </div>
           {items.length > 0 ? (
             <>
-              <label className="block space-y-2 text-sm font-medium text-espresso">
-                Seu nome
-                <input
-                  className="field max-w-full min-w-0"
-                  value={customerName}
-                  onChange={(e) => {
-                    setCustomerName(e.target.value);
-                    setSubmitError("");
-                  }}
-                  placeholder="Como devemos chamar você"
-                  autoComplete="name"
-                />
-              </label>
-              <label className="block space-y-2 text-sm font-medium text-espresso">
-                Seu WhatsApp
-                <input
-                  className="field max-w-full min-w-0"
-                  type="tel"
-                  inputMode="numeric"
-                  value={customerPhone}
-                  onChange={(e) => {
-                    setCustomerPhone(e.target.value.replace(/\D/g, ""));
-                    setSubmitError("");
-                  }}
-                  placeholder="DDD + número"
-                  autoComplete="tel"
-                />
-              </label>
-              <label className="block space-y-2 text-sm font-medium text-espresso">
-                Dia de retirada
-                <input
-                  type="date"
-                  className="field max-w-full min-w-0"
-                  min={minDate}
-                  value={pickupDate}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (!value) {
-                      setPickupDate("");
-                      setDateError("");
-                      return;
-                    }
-                    if (!isAllowedPickupDate(value)) {
-                      setPickupDate("");
-                      setDateError(PICKUP_DATE_BLOCKED);
-                      return;
-                    }
-                    setPickupDate(value);
-                    setDateError("");
-                  }}
-                  required
-                />
-                <span className="block text-xs font-normal text-espresso/60">
-                  {PICKUP_DATE_HINT} Horário e valor do topo confirmamos no
-                  WhatsApp.
-                </span>
-              </label>
-              {dateError ? (
-                <p className="text-sm text-red-800">{dateError}</p>
-              ) : null}
-              {submitError ? (
-                <p className="text-sm text-red-800">{submitError}</p>
-              ) : null}
               <button
                 type="button"
                 className="btn-primary w-full"
