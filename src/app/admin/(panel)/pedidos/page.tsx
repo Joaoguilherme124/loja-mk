@@ -302,7 +302,15 @@ export default function AdminOrdersPage() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Erro ao deletar");
-      setOrders((current) => current.filter((order) => order.id !== removedId));
+      setOrders((current) => {
+        const next = current.filter((order) => order.id !== removedId);
+        filterOrders(next, filterStatus);
+        return next;
+      });
+      setSelectedOrderId((current) =>
+        current === removedId ? null : current
+      );
+      setEditingId((current) => (current === removedId ? null : current));
       setMessage("Pedido removido com sucesso");
       setOrderToDelete(null);
     } catch {
