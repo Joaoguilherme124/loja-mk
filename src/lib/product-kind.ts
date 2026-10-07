@@ -88,6 +88,62 @@ export function isDocinhosProduct(product: Pick<Product, "kind" | "variants">) {
   );
 }
 
+export type DocinhoTier = "tradicional" | "especial";
+
+/** Infere tradicional/especial pela categoria, descrição ou nome do produto. */
+export function resolveDocinhoTier(
+  product: Pick<Product, "category" | "description" | "name">
+): DocinhoTier | null {
+  const haystack = [product.category, product.description, product.name]
+    .map((value) => String(value || "").toLowerCase())
+    .join(" ");
+  if (haystack.includes("especial")) return "especial";
+  if (haystack.includes("tradicional")) return "tradicional";
+  return null;
+}
+
+export function buildDocinhoCartLabel(
+  product: Pick<Product, "name" | "category" | "description">,
+  flavor: string
+) {
+  const name = product.name.trim() || "docinhos";
+  const flavorLabel = flavor.trim();
+  const tier = resolveDocinhoTier(product);
+  if (!flavorLabel) {
+    return tier ? `${name} (${tier})` : name;
+  }
+  if (!tier) return `${name} (${flavorLabel})`;
+  return `${name} (${tier} · ${flavorLabel})`;
+}
+
+/** Ordem no carrinho/WhatsApp: outros itens → tradicionais → especiais. */
+export function cartItemDocinhoSortKey(item: {
+  name: string;
+  kind?: string;
+}) {
+  const lower = item.name.toLowerCase();
+  const isDoc =
+    item.kind === "docinhos" || /\bdocinhos?\b/i.test(item.name);
+  if (!isDoc) return 0;
+  if (lower.includes("tradicional")) return 1;
+  if (lower.includes("especial")) return 2;
+  return 3;
+}
+
+export function sortCartItemsByDocinhoTier<
+  T extends { name: string; kind?: string },
+>(items: T[]): T[] {
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const key =
+        cartItemDocinhoSortKey(a.item) - cartItemDocinhoSortKey(b.item);
+      if (key !== 0) return key;
+      return a.index - b.index;
+    })
+    .map(({ item }) => item);
+}
+
 export function isTortasProduct(product: Pick<Product, "kind">) {
   return parseProductKind(product.kind) === "tortas";
 }

@@ -1,3 +1,4 @@
+import { sortCartItemsByDocinhoTier } from "./product-kind";
 import { formatQuantity, formatRate, isSoldByKg } from "./sold-by";
 import type { Product, SoldBy } from "./types";
 
@@ -54,7 +55,8 @@ export function buildCartWhatsAppLink(
   pickupDate?: string
 ) {
   const digits = phone.replace(/\D/g, "");
-  const lines = items.map((item) => {
+  const orderedItems = sortCartItemsByDocinhoTier(items);
+  const lines = orderedItems.map((item) => {
     const soldBy = item.soldBy || "unit";
     const qty = isSoldByKg(soldBy)
       ? formatQuantity(item.quantity, soldBy)
@@ -63,7 +65,7 @@ export function buildCartWhatsAppLink(
   });
   const subtotal =
     promo?.subtotal ??
-    items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    orderedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = promo?.total ?? subtotal;
 
   let totalsBlock = `Total: ${formatPrice(total)}`;

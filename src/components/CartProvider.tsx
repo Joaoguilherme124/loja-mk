@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { sortCartItemsByDocinhoTier } from "@/lib/product-kind";
 import {
   minQuantity,
   normalizeQuantity,
@@ -259,6 +260,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setPromo(null);
   }, []);
 
+  const displayItems = useMemo(
+    () => sortCartItemsByDocinhoTier(items),
+    [items]
+  );
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [items]
@@ -271,9 +276,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(
     () => ({
-      items,
+      items: displayItems,
       promo,
-      count: items.length,
+      count: displayItems.length,
       subtotal,
       discount,
       total,
@@ -287,7 +292,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
     }),
     [
-      items,
+      displayItems,
       promo,
       subtotal,
       discount,

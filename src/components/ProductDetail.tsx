@@ -12,6 +12,7 @@ import {
   variantLabel,
 } from "@/lib/product-variants";
 import {
+  buildDocinhoCartLabel,
   buildTortaCartLabel,
   buildTortaVariantId,
   calcTortaTotal,
@@ -344,7 +345,7 @@ function DefaultProductDetail({ product }: Props) {
   const image = selectedVariant?.image ?? product.image;
   const displayName = selectedVariant
     ? docinhos
-      ? `${product.name} (${selectedVariant.style})`
+      ? buildDocinhoCartLabel(product, selectedVariant.style)
       : `${product.name} (${variantLabel(selectedVariant)})`
     : product.name;
 

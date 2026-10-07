@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isAdminAuthenticated } from "@/lib/auth";
+import {
+  buildDocinhoCartLabel,
+  isDocinhosProduct,
+  resolveDocinhoTier,
+} from "@/lib/product-kind";
 import { createId, readStore } from "@/lib/store";
 import { readDatabase, writeDatabase } from "@/lib/database";
 import type { Order, OrderItem } from "@/lib/types";
@@ -90,14 +95,25 @@ export async function POST(request: Request) {
               ? product.variants![0]
               : undefined);
           const price = variant?.price ?? product.price;
+          const docinhos = isDocinhosProduct(product);
           const variantLabelText = variant
-            ? `${variant.size} · ${variant.style}`
+            ? docinhos
+              ? (() => {
+                  const tier = resolveDocinhoTier(product);
+                  return tier
+                    ? `${tier} · ${variant.style}`
+                    : variant.style;
+                })()
+              : `${variant.size} · ${variant.style}`
             : undefined;
+          const productName = variant
+            ? docinhos
+              ? buildDocinhoCartLabel(product, variant.style)
+              : `${product.name} (${variantLabelText})`
+            : product.name;
           return {
             productId: product.id,
-            productName: variantLabelText
-              ? `${product.name} (${variantLabelText})`
-              : product.name,
+            productName,
             quantity: (() => {
               const soldBy = product.soldBy === "kg" ? "kg" : "unit";
               const raw = Number(item.quantity);
