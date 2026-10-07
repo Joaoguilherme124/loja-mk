@@ -97,8 +97,9 @@ export function resolveDocinhoTier(
   const haystack = [product.category, product.description, product.name]
     .map((value) => String(value || "").toLowerCase())
     .join(" ");
-  if (haystack.includes("especial")) return "especial";
-  if (haystack.includes("tradicional")) return "tradicional";
+  // "especiais" / "tradicionais" também contam (includes("especial") falha no plural)
+  if (/especial/.test(haystack)) return "especial";
+  if (/tradicional/.test(haystack)) return "tradicional";
   return null;
 }
 
@@ -125,8 +126,8 @@ export function cartItemDocinhoSortKey(item: {
   const isDoc =
     item.kind === "docinhos" || /\bdocinhos?\b/i.test(item.name);
   if (!isDoc) return 0;
-  if (lower.includes("tradicional")) return 1;
-  if (lower.includes("especial")) return 2;
+  if (/tradicional/.test(lower)) return 1;
+  if (/especial/.test(lower)) return 2;
   return 3;
 }
 
