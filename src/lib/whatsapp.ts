@@ -1,12 +1,71 @@
 import { sortCartItemsByDocinhoTier } from "./product-kind";
 import { formatQuantity, formatRate, isSoldByKg } from "./sold-by";
-import type { Product, SoldBy } from "./types";
+import type { Product, ProductKind, SoldBy } from "./types";
 
 export function formatPrice(value: number) {
   return value.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+}
+
+type CartCategory = "bolos" | "tortas" | "docinhos" | "outros";
+
+const CATEGORY_ORDER: CartCategory[] = [
+  "bolos",
+  "tortas",
+  "docinhos",
+  "outros",
+];
+
+const CATEGORY_LABEL: Record<CartCategory, string> = {
+  bolos: "bolos",
+  tortas: "tortas",
+  docinhos: "docinhos",
+  outros: "outros",
+};
+
+function resolveCartCategory(item: {
+  name: string;
+  kind?: ProductKind;
+}): CartCategory {
+  if (item.kind === "bolos") return "bolos";
+  if (item.kind === "tortas") return "tortas";
+  if (item.kind === "docinhos") return "docinhos";
+  const lower = item.name.toLowerCase();
+  if (/\bdocinhos?\b/.test(lower)) return "docinhos";
+  if (/\btortas?\b/.test(lower)) return "tortas";
+  if (/\bbolos?\b/.test(lower)) return "bolos";
+  return "outros";
+}
+
+function buildCategorySubtotalsBlock(
+  items: CartWhatsAppItem[],
+  grandTotal: number
+) {
+  const totals = new Map<CartCategory, number>();
+  for (const item of items) {
+    const category = resolveCartCategory(item);
+    const lineTotal = item.price * item.quantity;
+    totals.set(category, (totals.get(category) || 0) + lineTotal);
+  }
+
+  const present = CATEGORY_ORDER.filter((category) => {
+    const value = totals.get(category) || 0;
+    return value > 0;
+  });
+
+  // Só mostra subtotais quando há mais de uma categoria no pedido
+  if (present.length <= 1) {
+    return `Total: ${formatPrice(grandTotal)}`;
+  }
+
+  const lines = present.map(
+    (category) =>
+      `Subtotal ${CATEGORY_LABEL[category]}: ${formatPrice(totals.get(category) || 0)}`
+  );
+  lines.push(`Total: ${formatPrice(grandTotal)}`);
+  return lines.join("\n");
 }
 
 export function buildWhatsAppLink(
@@ -39,6 +98,7 @@ export type CartWhatsAppItem = {
   quantity: number;
   price: number;
   soldBy?: SoldBy;
+  kind?: ProductKind;
 };
 
 export function buildCartWhatsAppLink(
@@ -55,7 +115,11 @@ export function buildCartWhatsAppLink(
   pickupDate?: string
 ) {
   const digits = phone.replace(/\D/g, "");
-  const orderedItems = sortCartItemsByDocinhoTier(items);
+  const orderedItems = [...sortCartItemsByDocinhoTier(items)].sort((a, b) => {
+    const catA = CATEGORY_ORDER.indexOf(resolveCartCategory(a));
+    const catB = CATEGORY_ORDER.indexOf(resolveCartCategory(b));
+    return catA - catB;
+  });
   const lines = orderedItems.map((item) => {
     const soldBy = item.soldBy || "unit";
     const qty = isSoldByKg(soldBy)
@@ -68,9 +132,18 @@ export function buildCartWhatsAppLink(
     orderedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = promo?.total ?? subtotal;
 
-  let totalsBlock = `Total: ${formatPrice(total)}`;
+  let totalsBlock = buildCategorySubtotalsBlock(orderedItems, total);
   if (promo && promo.discountAmount > 0) {
-    totalsBlock = `Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\nTotal: ${formatPrice(promo.total)}`;
+    const categoryBlock = buildCategorySubtotalsBlock(
+      orderedItems,
+      promo.subtotal
+    );
+    const categoryLines = categoryBlock
+      .split("\n")
+      .filter((line) => !line.startsWith("Total:"));
+    const prefix =
+      categoryLines.length > 0 ? `${categoryLines.join("\n")}\n` : "";
+    totalsBlock = `${prefix}Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\nTotal: ${formatPrice(promo.total)}`;
   }
 
   const pickupBlock = pickupDate?.trim()

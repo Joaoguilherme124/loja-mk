@@ -550,7 +550,7 @@ function DefaultProductDetail({ product }: Props) {
                   price: unitPrice,
                   image,
                   soldBy,
-                  kind: docinhos ? "docinhos" : undefined,
+                  kind: docinhos ? "docinhos" : "bolos",
                 },
                 quantity
               )
