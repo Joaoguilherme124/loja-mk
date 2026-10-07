@@ -4,7 +4,6 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import {
   buildDocinhoCartLabel,
   isDocinhosProduct,
-  resolveDocinhoTier,
 } from "@/lib/product-kind";
 import { createId, readStore } from "@/lib/store";
 import { readDatabase, writeDatabase } from "@/lib/database";
@@ -99,16 +98,22 @@ export async function POST(request: Request) {
           const variantLabelText = variant
             ? docinhos
               ? (() => {
-                  const tier = resolveDocinhoTier(product);
-                  return tier
-                    ? `${tier} · ${variant.style}`
+                  const label = buildDocinhoCartLabel(
+                    product,
+                    variant.style,
+                    variant.size
+                  );
+                  const open = label.indexOf("(");
+                  const close = label.lastIndexOf(")");
+                  return open >= 0 && close > open
+                    ? label.slice(open + 1, close)
                     : variant.style;
                 })()
               : `${variant.size} · ${variant.style}`
             : undefined;
           const productName = variant
             ? docinhos
-              ? buildDocinhoCartLabel(product, variant.style)
+              ? buildDocinhoCartLabel(product, variant.style, variant.size)
               : `${product.name} (${variantLabelText})`
             : product.name;
           return {

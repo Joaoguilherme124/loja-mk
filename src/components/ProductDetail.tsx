@@ -345,7 +345,11 @@ function DefaultProductDetail({ product }: Props) {
   const image = selectedVariant?.image ?? product.image;
   const displayName = selectedVariant
     ? docinhos
-      ? buildDocinhoCartLabel(product, selectedVariant.style)
+      ? buildDocinhoCartLabel(
+          product,
+          selectedVariant.style,
+          selectedVariant.size
+        )
       : `${product.name} (${variantLabel(selectedVariant)})`
     : product.name;
 

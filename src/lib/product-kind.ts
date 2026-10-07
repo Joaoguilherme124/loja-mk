@@ -90,6 +90,16 @@ export function isDocinhosProduct(product: Pick<Product, "kind" | "variants">) {
 
 export type DocinhoTier = "tradicional" | "especial";
 
+/** Infere o tipo a partir do size da variação (quando gravado no cadastro). */
+export function resolveDocinhoTierFromSize(
+  size?: string | null
+): DocinhoTier | null {
+  const value = String(size || "").toLowerCase();
+  if (/especiai|especial/.test(value)) return "especial";
+  if (/tradicion/.test(value)) return "tradicional";
+  return null;
+}
+
 /** Infere tradicional/especial pela categoria, descrição ou nome do produto. */
 export function resolveDocinhoTier(
   product: Pick<Product, "category" | "description" | "name">
@@ -97,19 +107,27 @@ export function resolveDocinhoTier(
   const haystack = [product.category, product.description, product.name]
     .map((value) => String(value || "").toLowerCase())
     .join(" ");
-  // "especiais" / "tradicionais" também contam (includes("especial") falha no plural)
-  if (/especial/.test(haystack)) return "especial";
-  if (/tradicional/.test(haystack)) return "tradicional";
+  // "especiais" não contém "especial"; "tradicionais"/"Trdicional" usam /tradicion/
+  if (/especiai|especial/.test(haystack)) return "especial";
+  if (/tradicion/.test(haystack)) return "tradicional";
   return null;
 }
 
 export function buildDocinhoCartLabel(
   product: Pick<Product, "name" | "category" | "description">,
-  flavor: string
+  flavor: string,
+  variantSize?: string | null
 ) {
-  const name = product.name.trim() || "docinhos";
   const flavorLabel = flavor.trim();
-  const tier = resolveDocinhoTier(product);
+  const tier =
+    resolveDocinhoTierFromSize(variantSize) || resolveDocinhoTier(product);
+  const rawName = product.name.trim() || "docinhos";
+  // Padroniza o nome quando o cadastro usa "Especial"/"Tradicional" como título
+  const name = /^(docinhos?|tradicionais?|especiais?|especial|tradicional)$/i.test(
+    rawName
+  )
+    ? "docinhos"
+    : rawName;
   if (!flavorLabel) {
     return tier ? `${name} (${tier})` : name;
   }
@@ -126,8 +144,8 @@ export function cartItemDocinhoSortKey(item: {
   const isDoc =
     item.kind === "docinhos" || /\bdocinhos?\b/i.test(item.name);
   if (!isDoc) return 0;
-  if (/tradicional/.test(lower)) return 1;
-  if (/especial/.test(lower)) return 2;
+  if (/tradicion/.test(lower)) return 1;
+  if (/especiai|especial/.test(lower)) return 2;
   return 3;
 }
 

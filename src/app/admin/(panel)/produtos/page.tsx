@@ -11,6 +11,7 @@ import {
   isDocinhosProduct,
   isTortasProduct,
   kindCategory,
+  resolveDocinhoTier,
   resolveFormKind,
   TORTA_CHOCOLATE_EXTRA_PER_KG,
   variantsFromFlavors,
@@ -345,7 +346,13 @@ export default function AdminProductsPage() {
           throw new Error("Cada sabor precisa de preço");
         }
 
-        variants = variantsFromFlavors(valid, cover);
+        const docinhoTier =
+          resolveDocinhoTier({
+            name: form.name,
+            category: form.category,
+            description: form.description,
+          }) || "tradicional";
+        variants = variantsFromFlavors(valid, cover, docinhoTier);
         image = cover || variants[0]?.image || "";
         price = Math.min(...variants.map((variant) => variant.price));
       } else {
@@ -554,6 +561,38 @@ export default function AdminProductsPage() {
               required
             />
           </label>
+
+          {isDocinhos ? (
+            <label className="space-y-2 text-sm font-medium md:col-span-2">
+              Tipo do docinho
+              <select
+                className="field"
+                value={
+                  resolveDocinhoTier({
+                    name: form.name,
+                    category: form.category,
+                    description: form.description,
+                  }) || "tradicional"
+                }
+                onChange={(e) => {
+                  const tier = e.target.value === "especial" ? "especial" : "tradicional";
+                  setForm({
+                    ...form,
+                    category: tier === "especial" ? "ESPECIAIS" : "TRADICIONAIS",
+                    description:
+                      tier === "especial" ? "especiais" : "tradicional",
+                  });
+                }}
+              >
+                <option value="tradicional">Tradicional</option>
+                <option value="especial">Especial</option>
+              </select>
+              <span className="block text-xs font-normal text-espresso/60">
+                Define se o pedido no WhatsApp mostra
+                &quot;tradicional&quot; ou &quot;especial&quot;.
+              </span>
+            </label>
+          ) : null}
 
           <label className="space-y-2 text-sm font-medium md:col-span-2">
             Descrição
