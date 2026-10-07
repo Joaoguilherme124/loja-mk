@@ -36,18 +36,17 @@ import {
   parseSoldBy,
   quantityStep,
 } from "@/lib/sold-by";
-import { buildWhatsAppLink, formatPrice } from "@/lib/whatsapp";
+import { formatPrice } from "@/lib/whatsapp";
 import type { Product, TortaSizeOption } from "@/lib/types";
 
 type Props = {
   product: Product;
-  whatsapp: string;
+  whatsapp?: string;
   tortaSizes?: TortaSizeOption[];
 };
 
 function TortaDetail({
   product,
-  whatsapp,
   tortaSizes = DEFAULT_TORTA_SIZES,
 }: Props) {
   const sizes =
@@ -89,16 +88,6 @@ function TortaDetail({
     flavors: selected,
   });
   const canAdd = selected.length >= 1 && selected.length <= TORTA_MAX_FLAVORS;
-
-  const link = useMemo(
-    () =>
-      buildWhatsAppLink(
-        whatsapp,
-        { name: displayName, price: unitPrice, soldBy: "unit" },
-        quantity
-      ),
-    [whatsapp, displayName, unitPrice, quantity]
-  );
 
   function toggleFlavor(flavor: TortaFlavorOption) {
     setFlavorError("");
@@ -326,29 +315,13 @@ function TortaDetail({
           {flavorError ? (
             <p className="text-sm text-red-700">{flavorError}</p>
           ) : null}
-
-          <a
-            href={canAdd ? link : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`btn-ghost w-full ${!canAdd ? "opacity-50" : ""}`}
-            aria-disabled={!canAdd}
-            onClick={(event) => {
-              if (!canAdd) {
-                event.preventDefault();
-                setFlavorError("Selecione no mínimo um sabor");
-              }
-            }}
-          >
-            Pedir só este no WhatsApp
-          </a>
         </div>
       </div>
     </>
   );
 }
 
-function DefaultProductDetail({ product, whatsapp }: Props) {
+function DefaultProductDetail({ product }: Props) {
   const variantsEnabled = hasVariants(product);
   const docinhos = isDocinhosProduct(product);
   const kind = docinhos ? "docinhos" : product.kind;
@@ -380,16 +353,6 @@ function DefaultProductDetail({ product, whatsapp }: Props) {
     if (docinhos) return styles;
     return styles.filter((entry) => findVariant(product, size, entry));
   }, [variantsEnabled, styles, product, size, docinhos]);
-
-  const link = useMemo(
-    () =>
-      buildWhatsAppLink(
-        whatsapp,
-        { name: displayName, price: unitPrice, soldBy },
-        quantity
-      ),
-    [whatsapp, displayName, unitPrice, soldBy, quantity]
-  );
 
   function selectSize(nextSize: string) {
     setSize(nextSize);
@@ -590,30 +553,15 @@ function DefaultProductDetail({ product, whatsapp }: Props) {
           >
             Adicionar ao pedido
           </button>
-
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-ghost w-full"
-          >
-            Pedir só este no WhatsApp
-          </a>
         </div>
       </div>
     </>
   );
 }
 
-export function ProductDetail({ product, whatsapp, tortaSizes }: Props) {
+export function ProductDetail({ product, tortaSizes }: Props) {
   if (isTortasProduct(product)) {
-    return (
-      <TortaDetail
-        product={product}
-        whatsapp={whatsapp}
-        tortaSizes={tortaSizes}
-      />
-    );
+    return <TortaDetail product={product} tortaSizes={tortaSizes} />;
   }
-  return <DefaultProductDetail product={product} whatsapp={whatsapp} />;
+  return <DefaultProductDetail product={product} />;
 }

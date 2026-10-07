@@ -59,25 +59,23 @@ export function buildCartWhatsAppLink(
     const qty = isSoldByKg(soldBy)
       ? formatQuantity(item.quantity, soldBy)
       : `${item.quantity}x`;
-    return `• ${qty} ${item.name} — ${formatPrice(item.price * item.quantity)}`;
+    return `* ${qty} ${item.name} — ${formatPrice(item.price * item.quantity)}`;
   });
   const subtotal =
     promo?.subtotal ??
     items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = promo?.total ?? subtotal;
 
-  let totalsBlock = `*Total estimado:* ${formatPrice(total)}`;
+  let totalsBlock = `Total: ${formatPrice(total)}`;
   if (promo && promo.discountAmount > 0) {
-    totalsBlock = `Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\n*Total estimado:* ${formatPrice(promo.total)}`;
+    totalsBlock = `Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\nTotal: ${formatPrice(promo.total)}`;
   }
 
   const pickupBlock = pickupDate?.trim()
-    ? `\n\n*Retirada:* ${formatPickupDate(pickupDate.trim())}`
+    ? `\n\nRetirada: ${formatPickupDate(pickupDate.trim())}`
     : "";
   const noteBlock = note?.trim() ? `\n\nObs: ${note.trim()}` : "";
-  const confirmBlock =
-    "\n\nHorário de retirada e valor de topo (se houver) confirmamos no WhatsApp.";
-  const message = `Olá! Quero fazer este pedido:\n\n${lines.join("\n")}\n\n${totalsBlock}${pickupBlock}${noteBlock}${confirmBlock}\n\nPode confirmar?`;
+  const message = `CONFIRMAÇÃO DE PEDIDO\n\n${lines.join("\n")}\n\nDecoração:\n\n${totalsBlock}${pickupBlock}${noteBlock}\n\nHorario de retirada:\n\n\nPode confirmar?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 

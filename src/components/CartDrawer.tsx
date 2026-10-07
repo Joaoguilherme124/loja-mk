@@ -355,56 +355,70 @@ export function CartDrawer({ whatsapp }: Props) {
                   <p className="text-sm text-red-800">{submitError}</p>
                 ) : null}
               </div>
+
+              <div className="space-y-3 border-t border-cappuccino/40 pt-4 pb-2">
+                {discount > 0 ? (
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center justify-between text-espresso/70">
+                      <span>Subtotal</span>
+                      <span>{formatPrice(subtotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-emerald-800">
+                      <span>Desconto {promo?.discountLabel}</span>
+                      <span>-{formatPrice(discount)}</span>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-espresso/70">Total estimado</span>
+                  <span className="font-display text-2xl text-espresso">
+                    {formatPrice(total)}
+                  </span>
+                </div>
+                <div
+                  role="note"
+                  className="rounded-xl border border-amber-700/35 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-espresso"
+                >
+                  <p className="text-[13px] font-semibold uppercase tracking-wide text-amber-900">
+                    Atenção
+                  </p>
+                  <p className="mt-1.5 text-espresso/80">
+                    Seu pedido somente será incluso em nosso sistema após o
+                    recebimento e a confirmação do &quot;pedido
+                    finalizado&quot;. Leia atentamente a descrição do mesmo,
+                    para que não haja incoerência ao retirar o mesmo.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary w-full"
+                  onClick={openWhatsApp}
+                  disabled={sending}
+                >
+                  {sending ? "Registrando..." : "Pedir no WhatsApp"}
+                </button>
+                <Link
+                  href="/catalogo"
+                  className="btn-ghost w-full !text-sm"
+                  onClick={continueToCatalog}
+                >
+                  Continuar no catálogo
+                </Link>
+              </div>
             </>
           )}
-        </div>
 
-        <div className="shrink-0 space-y-3 border-t border-cappuccino/40 px-5 py-4">
-          {discount > 0 ? (
-            <div className="space-y-1 text-sm">
-              <div className="flex items-center justify-between text-espresso/70">
-                <span>Subtotal</span>
-                <span>{formatPrice(subtotal)}</span>
-              </div>
-              <div className="flex items-center justify-between text-emerald-800">
-                <span>Desconto {promo?.discountLabel}</span>
-                <span>-{formatPrice(discount)}</span>
-              </div>
-            </div>
-          ) : null}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-espresso/70">Total estimado</span>
-            <span className="font-display text-2xl text-espresso">
-              {formatPrice(total)}
-            </span>
-          </div>
-          {items.length > 0 ? (
-            <>
-              <button
-                type="button"
-                className="btn-primary w-full"
-                onClick={openWhatsApp}
-                disabled={sending}
-              >
-                {sending ? "Registrando..." : "Pedir no WhatsApp"}
-              </button>
+          {items.length === 0 ? (
+            <div className="pt-2">
               <Link
                 href="/catalogo"
-                className="btn-ghost w-full !text-sm"
+                className="btn-primary w-full"
                 onClick={continueToCatalog}
               >
                 Continuar no catálogo
               </Link>
-            </>
-          ) : (
-            <Link
-              href="/catalogo"
-              className="btn-primary w-full"
-              onClick={continueToCatalog}
-            >
-              Continuar no catálogo
-            </Link>
-          )}
+            </div>
+          ) : null}
         </div>
       </aside>
     </div>
