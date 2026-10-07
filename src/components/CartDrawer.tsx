@@ -389,7 +389,7 @@ export function CartDrawer({ whatsapp }: Props) {
                     Seu pedido somente será incluso em nosso sistema após o
                     recebimento e a confirmação do &quot;pedido
                     finalizado&quot;. Leia atentamente a descrição do mesmo,
-                    para que não haja incoerência ao retirar o mesmo.
+                    para que não haja incoerência ao retirar o produto.
                   </p>
                 </div>
                 <button
