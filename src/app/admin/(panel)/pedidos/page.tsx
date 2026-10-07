@@ -293,17 +293,18 @@ export default function AdminOrdersPage() {
   async function confirmDeleteOrder() {
     if (!orderToDelete) return;
 
+    const removedId = orderToDelete.id;
     setDeleting(true);
     setMessage("");
 
     try {
-      const res = await fetch(`/api/orders/${orderToDelete.id}`, {
+      const res = await fetch(`/api/orders/${removedId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Erro ao deletar");
+      setOrders((current) => current.filter((order) => order.id !== removedId));
       setMessage("Pedido removido com sucesso");
       setOrderToDelete(null);
-      await loadOrders();
     } catch {
       setMessage("Erro ao remover pedido");
     } finally {

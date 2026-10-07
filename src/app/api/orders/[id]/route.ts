@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { readDatabase, writeDatabase } from "@/lib/database";
+import {
+  deleteOrderById,
+  getOrderById,
+  updateOrderRecord,
+} from "@/lib/database";
 import { cookies } from "next/headers";
 import { isAdminAuthenticated } from "@/lib/auth";
 
@@ -34,9 +38,7 @@ export async function PUT(
   try {
     const orderId = (await params).id;
     const body = await request.json();
-    const data = await readDatabase();
-
-    const order = data.orders.find((o) => o.id === orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
     }
@@ -57,10 +59,9 @@ export async function PUT(
       const extra = Number(body.extraAmount);
       order.extraAmount = Number.isFinite(extra) && extra > 0 ? extra : 0;
     }
-    order.updatedAt = new Date().toISOString();
 
-    await writeDatabase(data);
-    return NextResponse.json(order);
+    const updated = await updateOrderRecord(order);
+    return NextResponse.json(updated);
   } catch (error) {
     return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 });
   }
@@ -76,10 +77,10 @@ export async function DELETE(
 
   try {
     const orderId = (await params).id;
-    const data = await readDatabase();
-
-    data.orders = data.orders.filter((o) => o.id !== orderId);
-    await writeDatabase(data);
+    const removed = await deleteOrderById(orderId);
+    if (!removed) {
+      return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

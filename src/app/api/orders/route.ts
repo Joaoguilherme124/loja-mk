@@ -6,7 +6,7 @@ import {
   isDocinhosProduct,
 } from "@/lib/product-kind";
 import { createId, readStore } from "@/lib/store";
-import { readDatabase, writeDatabase } from "@/lib/database";
+import { insertOrder, readDatabase } from "@/lib/database";
 import type { Order, OrderItem } from "@/lib/types";
 
 async function isAuthenticated(): Promise<string | null> {
@@ -74,7 +74,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const store = await readStore();
-    const ordersData = await readDatabase();
 
     const rawItems = Array.isArray(body.items) ? body.items : [];
     const items: OrderItem[] = rawItems
@@ -188,8 +187,7 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    ordersData.orders.unshift(order);
-    await writeDatabase(ordersData);
+    await insertOrder(order);
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {

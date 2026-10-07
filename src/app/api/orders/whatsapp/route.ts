@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createId } from "@/lib/store";
-import { readDatabase, writeDatabase } from "@/lib/database";
+import { insertOrder } from "@/lib/database";
 import type { Order, OrderItem, SoldBy } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -107,9 +107,7 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    const data = await readDatabase();
-    data.orders.unshift(order);
-    await writeDatabase(data);
+    await insertOrder(order);
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {

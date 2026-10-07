@@ -127,7 +127,23 @@ export function CartDrawer({ whatsapp }: Props) {
       variantId: item.variantId,
     }));
 
+    const link = buildCartWhatsAppLink(
+      whatsapp,
+      items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        soldBy: item.soldBy,
+      })),
+      `Cliente: ${name} · Contato: ${phone}`,
+      promoPayload,
+      pickupDate
+    );
+
     try {
+      // Abre o WhatsApp na hora; registra o pedido em paralelo
+      window.open(link, "_blank", "noopener,noreferrer");
+
       const res = await fetch("/api/orders/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -148,19 +164,6 @@ export function CartDrawer({ whatsapp }: Props) {
         throw new Error(data.error || "Não foi possível registrar o pedido.");
       }
 
-      const link = buildCartWhatsAppLink(
-        whatsapp,
-        items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          soldBy: item.soldBy,
-        })),
-        `Cliente: ${name} · Contato: ${phone}`,
-        promoPayload,
-        pickupDate
-      );
-      window.open(link, "_blank", "noopener,noreferrer");
       clearCart();
       setPickupDate("");
       setCustomerName("");

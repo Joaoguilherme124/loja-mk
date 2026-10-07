@@ -359,3 +359,138 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
     client.release();
   }
 }
+
+const ORDER_INSERT_SQL =
+  'INSERT INTO orders (id, "userId", "customerName", "customerEmail", "customerPhone", items, total, "extraAmount", status, notes, "deliveryDate", "deliveryTime", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)';
+
+function orderInsertParams(order: Order) {
+  return [
+    order.id,
+    order.userId,
+    order.customerName,
+    order.customerEmail,
+    order.customerPhone,
+    JSON.stringify(order.items),
+    order.totalPrice,
+    Number(order.extraAmount) || 0,
+    order.status,
+    order.notes,
+    toDateOnly(order.deliveryDate) || null,
+    order.deliveryTime ?? "",
+    order.createdAt,
+    order.updatedAt,
+  ];
+}
+
+/** Insere um pedido sem reescrever o resto do banco. */
+export async function insertOrder(order: Order): Promise<Order> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    data.orders.unshift(order);
+    await writeLocalDatabase(data);
+    return order;
+  }
+
+  await ensureDatabase();
+  await getPool().query(ORDER_INSERT_SQL, orderInsertParams(order));
+  return order;
+}
+
+/** Atualiza um pedido existente sem reescrever o resto do banco. */
+export async function updateOrderRecord(order: Order): Promise<Order> {
+  const updated: Order = {
+    ...order,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const index = data.orders.findIndex((entry) => entry.id === order.id);
+    if (index < 0) throw new Error("Pedido não encontrado");
+    data.orders[index] = updated;
+    await writeLocalDatabase(data);
+    return updated;
+  }
+
+  await ensureDatabase();
+  const result = await getPool().query(
+    `UPDATE orders SET
+      "userId" = $2,
+      "customerName" = $3,
+      "customerEmail" = $4,
+      "customerPhone" = $5,
+      items = $6,
+      total = $7,
+      "extraAmount" = $8,
+      status = $9,
+      notes = $10,
+      "deliveryDate" = $11,
+      "deliveryTime" = $12,
+      "updatedAt" = $13
+    WHERE id = $1`,
+    [
+      updated.id,
+      updated.userId,
+      updated.customerName,
+      updated.customerEmail,
+      updated.customerPhone,
+      JSON.stringify(updated.items),
+      updated.totalPrice,
+      Number(updated.extraAmount) || 0,
+      updated.status,
+      updated.notes,
+      toDateOnly(updated.deliveryDate) || null,
+      updated.deliveryTime ?? "",
+      updated.updatedAt,
+    ]
+  );
+  if (result.rowCount === 0) throw new Error("Pedido não encontrado");
+  return updated;
+}
+
+/** Remove um pedido pelo id, sem reescrever o resto do banco. */
+export async function deleteOrderById(orderId: string): Promise<boolean> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const before = data.orders.length;
+    data.orders = data.orders.filter((order) => order.id !== orderId);
+    if (data.orders.length === before) return false;
+    await writeLocalDatabase(data);
+    return true;
+  }
+
+  await ensureDatabase();
+  const result = await getPool().query("DELETE FROM orders WHERE id = $1", [
+    orderId,
+  ]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+/** Busca um pedido pelo id. */
+export async function getOrderById(orderId: string): Promise<Order | null> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return data.orders.find((order) => order.id === orderId) || null;
+  }
+
+  await ensureDatabase();
+  const result = await getPool().query<OrderRow>(
+    "SELECT * FROM orders WHERE id = $1",
+    [orderId]
+  );
+  const order = result.rows[0];
+  if (!order) return null;
+  return {
+    ...order,
+    items:
+      typeof order.items === "string"
+        ? (JSON.parse(order.items) as Order["items"])
+        : order.items ?? [],
+    totalPrice: Number(order.total),
+    extraAmount: Number(order.extraAmount) || 0,
+    deliveryDate: toDateOnly(order.deliveryDate),
+    deliveryTime: String(order.deliveryTime || ""),
+    createdAt: new Date(order.createdAt).toISOString(),
+    updatedAt: new Date(order.updatedAt).toISOString(),
+  };
+}
