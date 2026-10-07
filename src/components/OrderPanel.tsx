@@ -38,6 +38,8 @@ export function OrderPanel({ product }: Props) {
             price: product.price,
             image: product.image,
             soldBy,
+            kind: "bolos",
+            category: product.category,
           })
         }
       >

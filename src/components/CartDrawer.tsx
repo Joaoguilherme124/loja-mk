@@ -135,6 +135,7 @@ export function CartDrawer({ whatsapp }: Props) {
         price: item.price,
         soldBy: item.soldBy,
         kind: item.kind,
+        category: item.category,
       })),
       `Cliente: ${name} · Contato: ${phone}`,
       promoPayload,

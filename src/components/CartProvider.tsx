@@ -26,7 +26,16 @@ export type CartItem = {
   quantity: number;
   soldBy?: SoldBy;
   kind?: ProductKind;
+  /** Categoria do cadastro (ex.: bolo, torta) — usada nos subtotais do WhatsApp. */
+  category?: string;
 };
+
+function parseCartKind(value: unknown): ProductKind | undefined {
+  if (value === "docinhos" || value === "tortas" || value === "bolos") {
+    return value;
+  }
+  return undefined;
+}
 
 export type CartPromo = {
   title: string;
@@ -82,7 +91,8 @@ function loadState(): { items: CartItem[]; promo: CartPromo | null } {
       ? parsed.items
           .map((item: CartItem) => {
             const soldBy = parseSoldBy(item.soldBy);
-            const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+            const kind = parseCartKind(item.kind);
+            const category = String(item.category || "").trim() || undefined;
             return {
               productId: String(item.productId || ""),
               variantId: item.variantId ? String(item.variantId) : undefined,
@@ -91,6 +101,7 @@ function loadState(): { items: CartItem[]; promo: CartPromo | null } {
               image: String(item.image || ""),
               soldBy,
               kind,
+              category,
               quantity: normalizeQuantity(
                 Number(item.quantity) || minQuantity(soldBy, kind),
                 soldBy,
@@ -154,7 +165,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(
     (item: Omit<CartItem, "quantity">, quantity?: number) => {
       const soldBy = parseSoldBy(item.soldBy);
-      const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+      const kind = parseCartKind(item.kind);
+      const category = String(item.category || "").trim() || undefined;
       const qty = normalizeQuantity(
         quantity ?? minQuantity(soldBy, kind),
         soldBy,
@@ -169,6 +181,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                   ...entry,
                   soldBy,
                   kind,
+                  category: category || entry.category,
                   quantity: normalizeQuantity(
                     entry.quantity + qty,
                     soldBy,
@@ -178,7 +191,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
               : entry
           );
         }
-        return [...current, { ...item, soldBy, kind, quantity: qty }];
+        return [
+          ...current,
+          { ...item, soldBy, kind, category, quantity: qty },
+        ];
       });
     },
     []
@@ -201,9 +217,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         current.map((item) => {
           if (!sameLine(item, { productId, variantId })) return item;
           const soldBy = parseSoldBy(item.soldBy);
-          const kind = item.kind === "docinhos" ? "docinhos" : undefined;
+          const kind = parseCartKind(item.kind);
           return {
             ...item,
+            kind,
             quantity: normalizeQuantity(quantity, soldBy, kind),
           };
         })

@@ -101,6 +101,12 @@ export function ProductCard({ product, tortaSizes }: Props) {
                       price: product.price,
                       image: product.image,
                       soldBy,
+                      kind: tortas
+                        ? "tortas"
+                        : docinhos
+                          ? "docinhos"
+                          : "bolos",
+                      category: product.category,
                     })
                   }
                 >

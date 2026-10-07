@@ -122,6 +122,7 @@ function TortaDetail({
         image,
         soldBy: "unit",
         kind: "tortas",
+        category: product.category,
       },
       quantity
     );
@@ -551,6 +552,7 @@ function DefaultProductDetail({ product }: Props) {
                   image,
                   soldBy,
                   kind: docinhos ? "docinhos" : "bolos",
+                  category: product.category,
                 },
                 quantity
               )

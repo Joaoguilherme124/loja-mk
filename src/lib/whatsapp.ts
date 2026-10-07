@@ -28,14 +28,22 @@ const CATEGORY_LABEL: Record<CartCategory, string> = {
 function resolveCartCategory(item: {
   name: string;
   kind?: ProductKind;
+  category?: string;
 }): CartCategory {
   if (item.kind === "bolos") return "bolos";
   if (item.kind === "tortas") return "tortas";
   if (item.kind === "docinhos") return "docinhos";
-  const lower = item.name.toLowerCase();
-  if (/\bdocinhos?\b/.test(lower)) return "docinhos";
-  if (/\btortas?\b/.test(lower)) return "tortas";
-  if (/\bbolos?\b/.test(lower)) return "bolos";
+
+  // Categoria do cadastro (ex.: "bolo") + nome do item
+  const haystack = [item.category, item.name]
+    .map((value) => String(value || "").toLowerCase())
+    .join(" ");
+  if (/docinho/.test(haystack)) return "docinhos";
+  if (/torta|massa tradicional|massa chocolate/.test(haystack)) {
+    return "tortas";
+  }
+  // "bolo" na categoria OU padrões típicos de bolo no nome (fatias/cobertura)
+  if (/bolo|fatias|cobertura/.test(haystack)) return "bolos";
   return "outros";
 }
 
@@ -99,6 +107,7 @@ export type CartWhatsAppItem = {
   price: number;
   soldBy?: SoldBy;
   kind?: ProductKind;
+  category?: string;
 };
 
 export function buildCartWhatsAppLink(
