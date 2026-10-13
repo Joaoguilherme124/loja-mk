@@ -155,6 +155,12 @@ export function buildCartWhatsAppLink(
     totalsBlock = `${prefix}Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\nTotal: ${formatPrice(promo.total)}`;
   }
 
+  const docinhosQty = orderedItems
+    .filter((item) => resolveCartCategory(item) === "docinhos")
+    .reduce((sum, item) => sum + item.quantity, 0);
+  const docinhosQtyBlock =
+    docinhosQty > 0 ? `Total de docinhos: ${docinhosQty} un.\n` : "";
+
   const hasTorta = orderedItems.some(
     (item) => resolveCartCategory(item) === "tortas"
   );
@@ -164,7 +170,7 @@ export function buildCartWhatsAppLink(
     ? `\n\nRetirada: ${formatPickupDate(pickupDate.trim())}`
     : "";
   const noteBlock = note?.trim() ? `\n\nObs: ${note.trim()}` : "";
-  const message = `CONFIRMAÇÃO DE PEDIDO\n\n${lines.join("\n")}${decorationBlock}\n${totalsBlock}${pickupBlock}${noteBlock}\n\nHorario de retirada:\n\n\nPode confirmar?`;
+  const message = `CONFIRMAÇÃO DE PEDIDO\n\n${lines.join("\n")}${decorationBlock}\n${docinhosQtyBlock}${totalsBlock}${pickupBlock}${noteBlock}\n\nHorário de retirada:\n\n\nPode confirmar?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
