@@ -11,10 +11,11 @@ export function formatPrice(value: number) {
 
 type CartCategory = "bolos" | "tortas" | "docinhos" | "outros";
 
+/** Ordem na mensagem: docinhos primeiro; tortas/bolos em seguida. */
 const CATEGORY_ORDER: CartCategory[] = [
-  "bolos",
-  "tortas",
   "docinhos",
+  "tortas",
+  "bolos",
   "outros",
 ];
 
@@ -129,13 +130,37 @@ export function buildCartWhatsAppLink(
     const catB = CATEGORY_ORDER.indexOf(resolveCartCategory(b));
     return catA - catB;
   });
-  const lines = orderedItems.map((item) => {
+
+  function itemLine(item: CartWhatsAppItem) {
     const soldBy = item.soldBy || "unit";
     const qty = isSoldByKg(soldBy)
       ? formatQuantity(item.quantity, soldBy)
       : `${item.quantity}x`;
     return `* ${qty} ${item.name} — ${formatPrice(item.price * item.quantity)}`;
-  });
+  }
+
+  const docinhosItems = orderedItems.filter(
+    (item) => resolveCartCategory(item) === "docinhos"
+  );
+  const otherItems = orderedItems.filter(
+    (item) => resolveCartCategory(item) !== "docinhos"
+  );
+  const docinhosQty = docinhosItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+
+  const bodyParts: string[] = [];
+  if (docinhosItems.length > 0) {
+    bodyParts.push(
+      `${docinhosQty} unidades.\n${docinhosItems.map(itemLine).join("\n")}`
+    );
+  }
+  if (otherItems.length > 0) {
+    bodyParts.push(otherItems.map(itemLine).join("\n"));
+  }
+  const itemsBlock = bodyParts.join("\n\n");
+
   const subtotal =
     promo?.subtotal ??
     orderedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -155,12 +180,6 @@ export function buildCartWhatsAppLink(
     totalsBlock = `${prefix}Subtotal: ${formatPrice(promo.subtotal)}\nDesconto ${promo.discountLabel} (${promo.title}): -${formatPrice(promo.discountAmount)}\nTotal: ${formatPrice(promo.total)}`;
   }
 
-  const docinhosQty = orderedItems
-    .filter((item) => resolveCartCategory(item) === "docinhos")
-    .reduce((sum, item) => sum + item.quantity, 0);
-  const docinhosQtyBlock =
-    docinhosQty > 0 ? `Total de docinhos: ${docinhosQty} un.\n` : "";
-
   const hasTorta = orderedItems.some(
     (item) => resolveCartCategory(item) === "tortas"
   );
@@ -170,7 +189,7 @@ export function buildCartWhatsAppLink(
     ? `\n\nRetirada: ${formatPickupDate(pickupDate.trim())}`
     : "";
   const noteBlock = note?.trim() ? `\n\nObs: ${note.trim()}` : "";
-  const message = `CONFIRMAÇÃO DE PEDIDO\n\n${lines.join("\n")}${decorationBlock}\n${docinhosQtyBlock}${totalsBlock}${pickupBlock}${noteBlock}\n\nHorário de retirada:\n\n\nPode confirmar?`;
+  const message = `CONFIRMAÇÃO DE PEDIDO\n\n${itemsBlock}${decorationBlock}\n${totalsBlock}${pickupBlock}${noteBlock}\n\nHorário de retirada:\n\n\nPode confirmar?`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 

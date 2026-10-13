@@ -377,6 +377,8 @@ function DefaultProductDetail({ product }: Props) {
         (variant) => variant.style === nextStyle
       );
       if (match) setSize(match.size);
+      // Cada sabor começa de novo no mínimo do pedido
+      setQuantity(minQuantity(soldBy, kind));
     }
   }
 
@@ -542,7 +544,7 @@ function DefaultProductDetail({ product }: Props) {
             type="button"
             className="btn-primary w-full"
             disabled={variantsEnabled && !selectedVariant}
-            onClick={() =>
+            onClick={() => {
               addItem(
                 {
                   productId: product.id,
@@ -555,8 +557,11 @@ function DefaultProductDetail({ product }: Props) {
                   category: product.category,
                 },
                 quantity
-              )
-            }
+              );
+              if (docinhos) {
+                setQuantity(minQuantity(soldBy, kind));
+              }
+            }}
           >
             Adicionar ao pedido
           </button>
