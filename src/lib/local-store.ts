@@ -2,7 +2,11 @@ import { promises as fs } from "fs";
 import path from "path";
 import { defaultStore } from "./seed";
 import { parseSoldBy } from "./sold-by";
-import { parseProductKind, resolveTortaSizes } from "./product-kind";
+import {
+  parseProductKind,
+  resolveTortaCorteSizes,
+  resolveTortaSizes,
+} from "./product-kind";
 import { parseImages } from "./product-images";
 import type { Order, Product, StoreData, User } from "./types";
 
@@ -34,6 +38,7 @@ function withDefaults(raw: Partial<LocalDatabaseData> | null): LocalDatabaseData
       whatsapp: String(settingsRaw.whatsapp || ""),
       about: String(settingsRaw.about || ""),
       tortaSizes: resolveTortaSizes(settingsRaw),
+      tortaCorteSizes: resolveTortaCorteSizes(settingsRaw),
     },
     products,
     promotions: raw?.promotions || defaultStore.promotions,

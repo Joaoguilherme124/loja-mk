@@ -1,7 +1,12 @@
 export type SoldBy = "unit" | "kg";
 
-/** bolos = tamanho/estilo; tortas = kg por circunferência + massa + sabores tradicional/especial; docinhos = sabores */
-export type ProductKind = "bolos" | "tortas" | "docinhos" | "default";
+/** bolos = tamanho/estilo; tortas = kg por circunferência + massa + sabores; tortas-corte = metragem fixa + 1–2 sabores; docinhos = sabores */
+export type ProductKind =
+  | "bolos"
+  | "tortas"
+  | "tortas-corte"
+  | "docinhos"
+  | "default";
 
 export type ProductVariant = {
   id: string;
@@ -54,6 +59,14 @@ export type TortaSizeOption = {
   fatias: string;
 };
 
+export type TortaCorteSizeOption = {
+  id: string;
+  width: number;
+  height: number;
+  kg: number;
+  fatias: number;
+};
+
 export type StoreSettings = {
   storeName: string;
   tagline: string;
@@ -61,6 +74,8 @@ export type StoreSettings = {
   about: string;
   /** Tamanhos de torta (cm / kg / fatias). Se vazio, usa o padrão do sistema. */
   tortaSizes?: TortaSizeOption[];
+  /** Tamanhos de torta de corte (metragem / kg / fatias). Se vazio, usa o padrão. */
+  tortaCorteSizes?: TortaCorteSizeOption[];
 };
 
 export type StoreData = {

@@ -31,7 +31,12 @@ export type CartItem = {
 };
 
 function parseCartKind(value: unknown): ProductKind | undefined {
-  if (value === "docinhos" || value === "tortas" || value === "bolos") {
+  if (
+    value === "docinhos" ||
+    value === "tortas-corte" ||
+    value === "tortas" ||
+    value === "bolos"
+  ) {
     return value;
   }
   return undefined;

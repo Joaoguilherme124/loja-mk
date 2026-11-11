@@ -4,7 +4,7 @@ import { ProductDetail } from "@/components/ProductDetail";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { readStore } from "@/lib/store";
-import { resolveTortaSizes } from "@/lib/product-kind";
+import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,7 @@ export default async function ProductPage({ params }: Props) {
   const store = await readStore();
   const product = store.products.find((p) => p.id === id && p.active);
   const tortaSizes = resolveTortaSizes(store.settings);
+  const tortaCorteSizes = resolveTortaCorteSizes(store.settings);
 
   if (!product) notFound();
 
@@ -39,6 +40,7 @@ export default async function ProductPage({ params }: Props) {
           product={product}
           whatsapp={store.settings.whatsapp}
           tortaSizes={tortaSizes}
+          tortaCorteSizes={tortaCorteSizes}
         />
       </main>
 

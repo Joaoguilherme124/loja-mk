@@ -1,5 +1,5 @@
 import { readDatabase, writeDatabase } from "./database";
-import { resolveTortaSizes } from "./product-kind";
+import { resolveTortaCorteSizes, resolveTortaSizes } from "./product-kind";
 import type { StoreData } from "./types";
 
 export async function readStore(): Promise<StoreData> {
@@ -8,6 +8,7 @@ export async function readStore(): Promise<StoreData> {
     settings: {
       ...data.settings,
       tortaSizes: resolveTortaSizes(data.settings),
+      tortaCorteSizes: resolveTortaCorteSizes(data.settings),
     },
     products: data.products,
     promotions: data.promotions,

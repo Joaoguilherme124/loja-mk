@@ -5,25 +5,33 @@ import { ImageCarousel } from "@/components/ImageCarousel";
 import { SafeImage } from "@/components/SafeImage";
 import { useCart } from "@/components/CartProvider";
 import { displayPrice, hasVariants } from "@/lib/product-variants";
-import { isDocinhosProduct, isTortasProduct } from "@/lib/product-kind";
+import {
+  isDocinhosProduct,
+  isTortaLikeProduct,
+  isTortasCorteProduct,
+  isTortasProduct,
+} from "@/lib/product-kind";
 import { productGallery } from "@/lib/product-images";
 import { formatRate, parseSoldBy } from "@/lib/sold-by";
-import type { Product, TortaSizeOption } from "@/lib/types";
+import type { Product, TortaCorteSizeOption, TortaSizeOption } from "@/lib/types";
 import { formatPrice } from "@/lib/whatsapp";
 
 type Props = {
   product: Product;
   tortaSizes?: TortaSizeOption[];
+  tortaCorteSizes?: TortaCorteSizeOption[];
 };
 
-export function ProductCard({ product, tortaSizes }: Props) {
+export function ProductCard({ product, tortaSizes, tortaCorteSizes }: Props) {
   const { addItem } = useCart();
-  const price = displayPrice(product, tortaSizes);
+  const price = displayPrice(product, tortaSizes, tortaCorteSizes);
   const withOptions = hasVariants(product);
   const docinhos = isDocinhosProduct(product);
   const tortas = isTortasProduct(product);
+  const tortasCorte = isTortasCorteProduct(product);
   const soldBy = parseSoldBy(product.soldBy);
-  const needsChoice = withOptions || soldBy === "kg" || docinhos || tortas;
+  const needsChoice =
+    withOptions || soldBy === "kg" || docinhos || isTortaLikeProduct(product);
   const priceLabel = formatRate(price, soldBy, formatPrice);
   const gallery = productGallery(product);
 
@@ -79,7 +87,7 @@ export function ProductCard({ product, tortaSizes }: Props) {
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-base font-semibold text-mocha md:text-lg">
-              {withOptions || tortas
+              {withOptions || isTortaLikeProduct(product)
                 ? `A partir de ${priceLabel}`
                 : priceLabel}
             </p>
@@ -103,9 +111,11 @@ export function ProductCard({ product, tortaSizes }: Props) {
                       soldBy,
                       kind: tortas
                         ? "tortas"
-                        : docinhos
-                          ? "docinhos"
-                          : "bolos",
+                        : tortasCorte
+                          ? "tortas-corte"
+                          : docinhos
+                            ? "docinhos"
+                            : "bolos",
                       category: product.category,
                     })
                   }

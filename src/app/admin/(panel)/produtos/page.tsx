@@ -3,17 +3,21 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { GalleryUploader } from "@/components/GalleryUploader";
 import { ImageUploader } from "@/components/ImageUploader";
+import { TortaCorteSizesEditor } from "@/components/TortaCorteSizesEditor";
 import { TortaSizesEditor } from "@/components/TortaSizesEditor";
 import {
   flavorsFromVariants,
   getTortaFlavors,
   getTortaRates,
   isDocinhosProduct,
+  isTortasCorteProduct,
   isTortasProduct,
   kindCategory,
   resolveDocinhoTier,
   resolveFormKind,
   TORTA_CHOCOLATE_EXTRA_PER_KG,
+  TORTA_CORTE_PRICE_SPECIAL,
+  TORTA_CORTE_PRICE_TRADITIONAL,
   variantsFromFlavors,
   variantsFromTortaFlavors,
 } from "@/lib/product-kind";
@@ -134,6 +138,8 @@ export default function AdminProductsPage() {
     const kind = resolveFormKind(product);
     const isDocinhos = kind === "docinhos";
     const isTortas = kind === "tortas";
+    const isTortasCorte = kind === "tortas-corte";
+    const isTortaLike = isTortas || isTortasCorte;
     const rates = getTortaRates(product);
     const groups = getTortaFlavors(product);
 
@@ -146,21 +152,32 @@ export default function AdminProductsPage() {
       image: product.image,
       images: isTortas ? productGallery(product) : [],
       category: product.category,
-      soldBy: isDocinhos || isTortas ? "unit" : parseSoldBy(product.soldBy),
-      tortaPriceTraditional: isTortas ? String(rates.traditional || "") : "",
-      tortaPriceSpecial: isTortas ? String(rates.special || "") : "",
+      soldBy: isDocinhos || isTortaLike ? "unit" : parseSoldBy(product.soldBy),
+      tortaPriceTraditional: isTortaLike
+        ? String(
+            rates.traditional ||
+              (isTortasCorte ? TORTA_CORTE_PRICE_TRADITIONAL : "")
+          )
+        : "",
+      tortaPriceSpecial: isTortaLike
+        ? String(
+            rates.special || (isTortasCorte ? TORTA_CORTE_PRICE_SPECIAL : "")
+          )
+        : "",
       featured: product.featured,
       active: product.active,
-      variants: isDocinhos || isTortas ? [] : toVariantForms(product.variants),
+      variants: isDocinhos || isTortaLike ? [] : toVariantForms(product.variants),
       flavors: isDocinhos
         ? toFlavorForms(product.variants).length > 0
           ? toFlavorForms(product.variants)
           : [emptyFlavor()]
         : [],
-      tortaFlavorsTraditional: isTortas
+      tortaFlavorsTraditional: isTortaLike
         ? toTortaFlavorForms(groups.traditional)
         : [],
-      tortaFlavorsSpecial: isTortas ? toTortaFlavorForms(groups.special) : [],
+      tortaFlavorsSpecial: isTortaLike
+        ? toTortaFlavorForms(groups.special)
+        : [],
     });
     requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -182,12 +199,19 @@ export default function AdminProductsPage() {
       category: kindCategory(kind),
       flavors: kind === "docinhos" ? [emptyFlavor()] : [],
       tortaFlavorsTraditional:
-        kind === "tortas" ? [emptyTortaFlavor()] : [],
-      tortaFlavorsSpecial: kind === "tortas" ? [emptyTortaFlavor()] : [],
+        kind === "tortas" || kind === "tortas-corte"
+          ? [emptyTortaFlavor()]
+          : [],
+      tortaFlavorsSpecial:
+        kind === "tortas" || kind === "tortas-corte"
+          ? [emptyTortaFlavor()]
+          : [],
       variants: [],
       price: "",
-      tortaPriceTraditional: "",
-      tortaPriceSpecial: "",
+      tortaPriceTraditional:
+        kind === "tortas-corte" ? String(TORTA_CORTE_PRICE_TRADITIONAL) : "",
+      tortaPriceSpecial:
+        kind === "tortas-corte" ? String(TORTA_CORTE_PRICE_SPECIAL) : "",
     });
   }
 
@@ -260,9 +284,14 @@ export default function AdminProductsPage() {
       let image = form.image.trim();
       let price = Number(form.price) || 0;
 
-      if (form.kind === "tortas") {
-        const gallery = form.images.map((url) => url.trim()).filter(Boolean);
-        const cover = gallery[0] || form.image.trim();
+      if (form.kind === "tortas" || form.kind === "tortas-corte") {
+        const isCorte = form.kind === "tortas-corte";
+        const gallery = isCorte
+          ? []
+          : form.images.map((url) => url.trim()).filter(Boolean);
+        const cover = isCorte
+          ? form.image.trim()
+          : gallery[0] || form.image.trim();
         const traditionalPrice = Number(form.tortaPriceTraditional) || 0;
         const specialPrice = Number(form.tortaPriceSpecial) || 0;
 
@@ -306,7 +335,7 @@ export default function AdminProductsPage() {
           soldBy: "unit" as const,
           kind: form.kind,
           image,
-          images: gallery,
+          images: isCorte ? (cover ? [cover] : []) : gallery,
           category: form.category,
           featured: form.featured,
           active: form.active,
@@ -416,7 +445,10 @@ export default function AdminProductsPage() {
 
   const isDocinhos = form.kind === "docinhos";
   const isTortas = form.kind === "tortas";
-  const usingVariants = !isDocinhos && !isTortas && form.variants.length > 0;
+  const isTortasCorte = form.kind === "tortas-corte";
+  const isTortaLike = isTortas || isTortasCorte;
+  const usingVariants =
+    !isDocinhos && !isTortaLike && form.variants.length > 0;
 
   function renderTortaFlavorList(
     title: string,
@@ -498,7 +530,7 @@ export default function AdminProductsPage() {
       <div>
         <h1 className="font-display text-4xl text-espresso">Produtos</h1>
         <p className="mt-2 text-espresso/70">
-          Cadastre bolos, tortas e docinhos.
+          Cadastre bolos, tortas, tortas de corte e docinhos.
         </p>
       </div>
 
@@ -516,6 +548,7 @@ export default function AdminProductsPage() {
             [
               { id: "bolos", label: "Bolos" },
               { id: "tortas", label: "Tortas" },
+              { id: "tortas-corte", label: "Tortas de corte" },
               { id: "docinhos", label: "Docinhos" },
             ] as const
           ).map((option) => (
@@ -536,16 +569,18 @@ export default function AdminProductsPage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm font-medium">
-            {isDocinhos || isTortas ? "Nome do grupo" : "Nome"}
+            {isDocinhos || isTortaLike ? "Nome do grupo" : "Nome"}
             <input
               className="field"
               value={form.name}
               placeholder={
                 isDocinhos
                   ? "Ex.: Docinhos"
-                  : isTortas
-                    ? "Ex.: Tortas"
-                    : ""
+                  : isTortasCorte
+                    ? "Ex.: Tortas de corte"
+                    : isTortas
+                      ? "Ex.: Tortas"
+                      : ""
               }
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
@@ -606,7 +641,7 @@ export default function AdminProductsPage() {
             />
           </label>
 
-          {!isDocinhos && !isTortas ? (
+          {!isDocinhos && !isTortaLike ? (
             <>
               <label className="space-y-2 text-sm font-medium">
                 Vendido por
@@ -649,7 +684,7 @@ export default function AdminProductsPage() {
                 </p>
               )}
             </>
-          ) : isTortas ? (
+          ) : isTortaLike ? (
             <div className="space-y-4 md:col-span-2">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm font-medium">
@@ -659,7 +694,7 @@ export default function AdminProductsPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="49.90"
+                    placeholder={isTortasCorte ? "55" : "49.90"}
                     value={form.tortaPriceTraditional}
                     onChange={(e) =>
                       setForm({
@@ -677,7 +712,7 @@ export default function AdminProductsPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="57.00"
+                    placeholder={isTortasCorte ? "65" : "57.00"}
                     value={form.tortaPriceSpecial}
                     onChange={(e) =>
                       setForm({
@@ -689,12 +724,25 @@ export default function AdminProductsPage() {
                   />
                 </label>
               </div>
-              <p className="text-sm text-espresso/70">
-                Massa de chocolate: +{" "}
-                {formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg. Tamanhos
-                disponíveis para o cliente (edite aqui):
-              </p>
-              <TortaSizesEditor />
+              {isTortasCorte ? (
+                <>
+                  <p className="text-sm text-espresso/70">
+                    Tamanhos disponíveis para o cliente (edite aqui). Se
+                    escolher um sabor especial, a torta inteira usa o preço
+                    especial.
+                  </p>
+                  <TortaCorteSizesEditor />
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-espresso/70">
+                    Massa de chocolate: +{" "}
+                    {formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg. Tamanhos
+                    disponíveis para o cliente (edite aqui):
+                  </p>
+                  <TortaSizesEditor />
+                </>
+              )}
             </div>
           ) : (
             <p className="text-sm text-espresso/70 md:col-span-2">
@@ -725,7 +773,7 @@ export default function AdminProductsPage() {
           </div>
         </div>
 
-        {!usingVariants || isDocinhos || isTortas ? (
+        {!usingVariants || isDocinhos || isTortaLike ? (
           <div className="space-y-2">
             {isTortas ? (
               <>
@@ -745,6 +793,19 @@ export default function AdminProductsPage() {
                 <p className="text-xs text-espresso/60">
                   A primeira foto é a capa. Várias fotos aparecem em carrossel no
                   catálogo.
+                </p>
+              </>
+            ) : isTortasCorte ? (
+              <>
+                <p className="text-sm font-medium text-espresso">
+                  Foto da torta de corte
+                </p>
+                <ImageUploader
+                  value={form.image}
+                  onChange={(image) => setForm({ ...form, image })}
+                />
+                <p className="text-xs text-espresso/60">
+                  Uma foto só. Sem carrossel.
                 </p>
               </>
             ) : (
@@ -768,7 +829,7 @@ export default function AdminProductsPage() {
           </div>
         ) : null}
 
-        {isTortas ? (
+        {isTortaLike ? (
           <>
             {renderTortaFlavorList(
               "Sabores tradicionais",
@@ -990,9 +1051,10 @@ export default function AdminProductsPage() {
 
       <div className="space-y-3">
         {products.map((product) => {
-          const rates = isTortasProduct(product)
-            ? getTortaRates(product)
-            : null;
+          const rates =
+            isTortasProduct(product) || isTortasCorteProduct(product)
+              ? getTortaRates(product)
+              : null;
           return (
             <div
               key={product.id}
@@ -1016,11 +1078,15 @@ export default function AdminProductsPage() {
                   {product.category}
                   {isDocinhosProduct(product)
                     ? " · docinhos"
-                    : isTortasProduct(product)
-                      ? " · tortas"
-                      : ""}{" "}
+                    : isTortasCorteProduct(product)
+                      ? " · tortas de corte"
+                      : isTortasProduct(product)
+                        ? " · tortas"
+                        : ""}{" "}
                   ·{" "}
-                  {isTortasProduct(product) && rates
+                  {(isTortasProduct(product) ||
+                    isTortasCorteProduct(product)) &&
+                  rates
                     ? `trad. ${formatPrice(rates.traditional)}/kg · esp. ${formatPrice(rates.special)}/kg · a partir de ${formatPrice(displayPrice(product))} · ${(product.variants || []).length} sabores`
                     : (product.variants || []).length > 0
                       ? `a partir de ${formatRate(product.price, product.soldBy, formatPrice)} · ${

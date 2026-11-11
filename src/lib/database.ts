@@ -3,7 +3,11 @@ import { defaultStore } from "./seed";
 import { parseImages } from "./product-images";
 import { parseVariants } from "./product-variants";
 import { parseSoldBy } from "./sold-by";
-import { parseProductKind, resolveTortaSizes } from "./product-kind";
+import {
+  parseProductKind,
+  resolveTortaCorteSizes,
+  resolveTortaSizes,
+} from "./product-kind";
 import { readLocalDatabase, writeLocalDatabase } from "./local-store";
 import type {
   NewsItem,
@@ -156,7 +160,11 @@ async function initializeDatabase(): Promise<void> {
   `);
   await db.query(`
     ALTER TABLE products
-    ADD COLUMN IF NOT EXISTS kind VARCHAR(16) NOT NULL DEFAULT 'default'
+    ADD COLUMN IF NOT EXISTS kind VARCHAR(32) NOT NULL DEFAULT 'default'
+  `);
+  await db.query(`
+    ALTER TABLE products
+    ALTER COLUMN kind TYPE VARCHAR(32)
   `);
   await db.query(`
     ALTER TABLE products
@@ -167,6 +175,10 @@ async function initializeDatabase(): Promise<void> {
     ADD COLUMN IF NOT EXISTS "tortaSizes" TEXT NULL
   `);
   await db.query(`
+    ALTER TABLE settings
+    ADD COLUMN IF NOT EXISTS "tortaCorteSizes" TEXT NULL
+  `);
+  await db.query(`
     ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS "extraAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0
   `);
@@ -175,13 +187,14 @@ async function initializeDatabase(): Promise<void> {
   if (settings.rowCount === 0) {
     const s = defaultStore.settings;
     await db.query(
-      'INSERT INTO settings (id, "storeName", tagline, whatsapp, about, "tortaSizes") VALUES (1, $1, $2, $3, $4, $5)',
+      'INSERT INTO settings (id, "storeName", tagline, whatsapp, about, "tortaSizes", "tortaCorteSizes") VALUES (1, $1, $2, $3, $4, $5, $6)',
       [
         s.storeName,
         s.tagline,
         s.whatsapp,
         s.about,
         JSON.stringify(s.tortaSizes || []),
+        JSON.stringify(s.tortaCorteSizes || []),
       ]
     );
   }
@@ -221,6 +234,15 @@ export async function readDatabase(): Promise<DatabaseData> {
       tortaSizesRaw = null;
     }
   }
+  let tortaCorteSizesRaw: unknown = (s as { tortaCorteSizes?: unknown })
+    .tortaCorteSizes;
+  if (typeof tortaCorteSizesRaw === "string") {
+    try {
+      tortaCorteSizesRaw = JSON.parse(tortaCorteSizesRaw);
+    } catch {
+      tortaCorteSizesRaw = null;
+    }
+  }
 
   return {
     settings: {
@@ -229,6 +251,9 @@ export async function readDatabase(): Promise<DatabaseData> {
       whatsapp: String(s.whatsapp),
       about: String(s.about),
       tortaSizes: resolveTortaSizes({ tortaSizes: tortaSizesRaw }),
+      tortaCorteSizes: resolveTortaCorteSizes({
+        tortaCorteSizes: tortaCorteSizesRaw,
+      }),
     },
     users: usersResult.rows.map((user) => ({ ...user, active: Boolean(user.active) })),
     products: productsResult.rows.map((product) => {
@@ -278,13 +303,14 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
   try {
     await client.query("BEGIN");
     await client.query(
-      'UPDATE settings SET "storeName" = $1, tagline = $2, whatsapp = $3, about = $4, "tortaSizes" = $5 WHERE id = 1',
+      'UPDATE settings SET "storeName" = $1, tagline = $2, whatsapp = $3, about = $4, "tortaSizes" = $5, "tortaCorteSizes" = $6 WHERE id = 1',
       [
         data.settings.storeName,
         data.settings.tagline,
         data.settings.whatsapp,
         data.settings.about,
         JSON.stringify(resolveTortaSizes(data.settings)),
+        JSON.stringify(resolveTortaCorteSizes(data.settings)),
       ]
     );
     await client.query("DELETE FROM orders");

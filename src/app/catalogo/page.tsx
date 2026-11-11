@@ -3,7 +3,7 @@ import { CatalogProductTabs } from "@/components/CatalogProductTabs";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
-import { resolveTortaSizes } from "@/lib/product-kind";
+import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,7 @@ export default async function CatalogPage() {
   const store = await readStore();
   const products = store.products.filter((p) => p.active);
   const tortaSizes = resolveTortaSizes(store.settings);
+  const tortaCorteSizes = resolveTortaCorteSizes(store.settings);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,7 +38,11 @@ export default async function CatalogPage() {
       </div>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-12 md:px-8">
-        <CatalogProductTabs products={products} tortaSizes={tortaSizes} />
+        <CatalogProductTabs
+          products={products}
+          tortaSizes={tortaSizes}
+          tortaCorteSizes={tortaCorteSizes}
+        />
       </main>
 
       <SiteFooter storeName={store.settings.storeName} />

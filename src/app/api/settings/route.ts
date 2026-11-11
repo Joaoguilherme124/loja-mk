@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { normalizeTortaSizes, resolveTortaSizes } from "@/lib/product-kind";
+import {
+  normalizeTortaCorteSizes,
+  normalizeTortaSizes,
+  resolveTortaCorteSizes,
+  resolveTortaSizes,
+} from "@/lib/product-kind";
 import { readStore, writeStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +20,7 @@ export async function GET() {
     {
       ...store.settings,
       tortaSizes: resolveTortaSizes(store.settings),
+      tortaCorteSizes: resolveTortaCorteSizes(store.settings),
     },
     {
       headers: { "Cache-Control": "no-store" },
@@ -46,6 +52,10 @@ export async function PUT(request: Request) {
     body.tortaSizes !== undefined
       ? normalizeTortaSizes(body.tortaSizes)
       : resolveTortaSizes(store.settings);
+  const tortaCorteSizes =
+    body.tortaCorteSizes !== undefined
+      ? normalizeTortaCorteSizes(body.tortaCorteSizes)
+      : resolveTortaCorteSizes(store.settings);
 
   if (!storeName) {
     return NextResponse.json(
@@ -71,12 +81,21 @@ export async function PUT(request: Request) {
     );
   }
 
+  if (!tortaCorteSizes.length) {
+    return NextResponse.json(
+      { error: "Informe pelo menos um tamanho de torta de corte." },
+      { status: 400 }
+    );
+  }
+
   store.settings = {
+    ...store.settings,
     storeName,
     tagline,
     whatsapp,
     about,
     tortaSizes,
+    tortaCorteSizes,
   };
 
   await writeStore(store);
@@ -85,6 +104,7 @@ export async function PUT(request: Request) {
     {
       ...store.settings,
       tortaSizes: resolveTortaSizes(store.settings),
+      tortaCorteSizes: resolveTortaCorteSizes(store.settings),
     },
     {
       headers: { "Cache-Control": "no-store" },

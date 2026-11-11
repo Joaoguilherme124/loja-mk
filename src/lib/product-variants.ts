@@ -1,10 +1,17 @@
 import {
+  isTortasCorteProduct,
   isTortasProduct,
   parseProductKind,
   tortaCatalogFromPrice,
+  tortaCorteCatalogFromPrice,
 } from "./product-kind";
 import { withSyncedImages } from "./product-images";
-import type { Product, ProductVariant, TortaSizeOption } from "./types";
+import type {
+  Product,
+  ProductVariant,
+  TortaCorteSizeOption,
+  TortaSizeOption,
+} from "./types";
 
 export function parseVariants(raw: unknown): ProductVariant[] {
   if (!raw) return [];
@@ -59,10 +66,14 @@ export function uniqueStyles(product: Product) {
 
 export function displayPrice(
   product: Product,
-  tortaSizes?: TortaSizeOption[]
+  tortaSizes?: TortaSizeOption[],
+  tortaCorteSizes?: TortaCorteSizeOption[]
 ) {
   if (isTortasProduct(product)) {
     return tortaCatalogFromPrice(product, tortaSizes);
+  }
+  if (isTortasCorteProduct(product)) {
+    return tortaCorteCatalogFromPrice(product, tortaCorteSizes);
   }
   const variants = product.variants || [];
   if (variants.length === 0) return product.price;
@@ -82,17 +93,23 @@ export function withSyncedPricing(product: Product): Product {
   if (variants.length === 0) {
     return { ...withImages, soldBy, kind, variants: [] };
   }
-  if (kind === "tortas") {
+  if (kind === "tortas" || kind === "tortas-corte") {
     const traditional = variants.find((v) => v.size === "tradicional");
     const price =
       traditional?.price ||
       Math.min(...variants.map((variant) => variant.price));
     const images =
-      withImages.images.length > 0
-        ? withImages.images
-        : variants[0]?.image
-          ? [variants[0].image]
-          : [];
+      kind === "tortas-corte"
+        ? withImages.image
+          ? [withImages.image]
+          : variants[0]?.image
+            ? [variants[0].image]
+            : []
+        : withImages.images.length > 0
+          ? withImages.images
+          : variants[0]?.image
+            ? [variants[0].image]
+            : [];
     return {
       ...withImages,
       soldBy: "unit",

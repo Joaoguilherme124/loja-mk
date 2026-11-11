@@ -1,6 +1,12 @@
-import type { Product, ProductKind, ProductVariant, TortaSizeOption } from "./types";
+import type {
+  Product,
+  ProductKind,
+  ProductVariant,
+  TortaCorteSizeOption,
+  TortaSizeOption,
+} from "./types";
 
-export type { TortaSizeOption };
+export type { TortaCorteSizeOption, TortaSizeOption };
 
 export const DOCINHO_SIZE = "Unidade";
 
@@ -8,6 +14,14 @@ export const TORTA_TIER_TRADICIONAL = "tradicional";
 export const TORTA_TIER_ESPECIAL = "especial";
 export const TORTA_CHOCOLATE_EXTRA_PER_KG = 5;
 export const TORTA_MAX_FLAVORS = 2;
+export const TORTA_CORTE_PRICE_TRADITIONAL = 55;
+export const TORTA_CORTE_PRICE_SPECIAL = 65;
+
+export const TORTA_CORTE_SIZES: TortaCorteSizeOption[] = [
+  { id: "21x16", width: 21, height: 16, kg: 2, fatias: 20 },
+  { id: "26x17", width: 26, height: 17, kg: 3, fatias: 30 },
+  { id: "32x22", width: 32, height: 22, kg: 5, fatias: 45 },
+];
 
 export type TortaMassa = "tradicional" | "chocolate";
 
@@ -64,8 +78,71 @@ export function resolveTortaSizes(settings?: {
   return normalizeTortaSizes(settings?.tortaSizes);
 }
 
+function cloneCorteDefaults() {
+  return TORTA_CORTE_SIZES.map((option) => ({ ...option }));
+}
+
+export function corteSizeId(width: number, height: number) {
+  return `${width}x${height}`;
+}
+
+export function normalizeTortaCorteSizes(raw: unknown): TortaCorteSizeOption[] {
+  if (!Array.isArray(raw) || raw.length === 0) return cloneCorteDefaults();
+
+  const parsed: TortaCorteSizeOption[] = [];
+  const seen = new Set<string>();
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const width = Number(
+      String((item as { width?: unknown }).width ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+    const height = Number(
+      String((item as { height?: unknown }).height ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+    const kg = Number(
+      String((item as { kg?: unknown }).kg ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+    const fatias = Number(
+      String((item as { fatias?: unknown }).fatias ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+    if (!Number.isFinite(width) || width <= 0) continue;
+    if (!Number.isFinite(height) || height <= 0) continue;
+    if (!Number.isFinite(kg) || kg <= 0) continue;
+    if (!Number.isFinite(fatias) || fatias <= 0) continue;
+    const id = corteSizeId(width, height);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    parsed.push({
+      id,
+      width,
+      height,
+      kg,
+      fatias: Math.round(fatias),
+    });
+  }
+
+  if (parsed.length === 0) return cloneCorteDefaults();
+  return parsed.sort((a, b) => a.width - b.width || a.height - b.height);
+}
+
+export function resolveTortaCorteSizes(settings?: {
+  tortaCorteSizes?: unknown;
+} | null) {
+  return normalizeTortaCorteSizes(settings?.tortaCorteSizes);
+}
+
 export function parseProductKind(value: unknown): ProductKind {
   if (value === "docinhos") return "docinhos";
+  if (value === "tortas-corte") return "tortas-corte";
   if (value === "tortas") return "tortas";
   if (value === "bolos") return "bolos";
   // legado: "default" e valores desconhecidos → bolos
@@ -74,13 +151,14 @@ export function parseProductKind(value: unknown): ProductKind {
 
 export function kindCategory(kind: ProductKind) {
   if (kind === "docinhos") return "Docinhos";
+  if (kind === "tortas-corte") return "Tortas de corte";
   if (kind === "tortas") return "Tortas";
   return "Bolos";
 }
 
 export function isDocinhosProduct(product: Pick<Product, "kind" | "variants">) {
   if (product.kind === "docinhos") return true;
-  if (product.kind === "tortas") return false;
+  if (product.kind === "tortas" || product.kind === "tortas-corte") return false;
   const variants = product.variants || [];
   return (
     variants.length > 0 &&
@@ -167,12 +245,25 @@ export function isTortasProduct(product: Pick<Product, "kind">) {
   return parseProductKind(product.kind) === "tortas";
 }
 
+export function isTortasCorteProduct(product: Pick<Product, "kind">) {
+  return parseProductKind(product.kind) === "tortas-corte";
+}
+
+export function isTortaLikeProduct(product: Pick<Product, "kind">) {
+  return isTortasProduct(product) || isTortasCorteProduct(product);
+}
+
 /** Resolve o modo do formulário ao editar (considera kind e categoria legada). */
 export function resolveFormKind(product: Product): ProductKind {
   if (isDocinhosProduct(product)) return "docinhos";
   const kind = parseProductKind(product.kind);
-  if (kind === "tortas" || kind === "docinhos") return kind;
+  if (kind === "tortas-corte" || kind === "tortas" || kind === "docinhos") {
+    return kind;
+  }
   const category = (product.category || "").trim().toLowerCase();
+  if (category.includes("torta") && category.includes("corte")) {
+    return "tortas-corte";
+  }
   if (category.includes("torta")) return "tortas";
   if (category.includes("docinho")) return "docinhos";
   return "bolos";
@@ -280,6 +371,45 @@ export function calcTortaTotal(options: {
 }) {
   const extra = options.chocolate ? TORTA_CHOCOLATE_EXTRA_PER_KG : 0;
   return (options.ratePerKg + extra) * options.kg;
+}
+
+export function tortaCorteSizeLabel(
+  option: Pick<TortaCorteSizeOption, "width" | "height" | "kg" | "fatias">
+) {
+  return `${option.width}x${option.height} · ${option.kg} kg · ${option.fatias} fatias`;
+}
+
+export function tortaCorteCatalogFromPrice(
+  product: Pick<Product, "price" | "variants">,
+  sizes: TortaCorteSizeOption[] = TORTA_CORTE_SIZES
+) {
+  const rates = getTortaRates(product);
+  const list = sizes.length > 0 ? sizes : TORTA_CORTE_SIZES;
+  const smallest = list[0];
+  return calcTortaTotal({
+    kg: smallest.kg,
+    ratePerKg: rates.traditional,
+    chocolate: false,
+  });
+}
+
+export function buildTortaCorteCartLabel(options: {
+  productName: string;
+  size: TortaCorteSizeOption;
+  flavors: { name: string }[];
+}) {
+  const flavorNames = options.flavors.map((f) => f.name).join(" + ");
+  return `${options.productName} (${tortaCorteSizeLabel(options.size)}${
+    flavorNames ? ` · ${flavorNames}` : ""
+  })`;
+}
+
+export function buildTortaCorteVariantId(options: {
+  sizeId: string;
+  flavorIds: string[];
+}) {
+  const ids = [...options.flavorIds].sort().join("+");
+  return `torta-corte:${options.sizeId}:${ids}`;
 }
 
 /** Preço de vitrine: menor tamanho × kg tradicional (sem chocolate). */

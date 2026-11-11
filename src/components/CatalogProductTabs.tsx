@@ -4,20 +4,28 @@ import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
 import {
   isDocinhosProduct,
+  isTortasCorteProduct,
   isTortasProduct,
   parseProductKind,
 } from "@/lib/product-kind";
-import type { Product, TortaSizeOption } from "@/lib/types";
+import type { Product, TortaCorteSizeOption, TortaSizeOption } from "@/lib/types";
 
-type CatalogTab = "bolos" | "tortas" | "docinhos";
+type CatalogTab = "bolos" | "tortas" | "tortas-corte" | "docinhos";
 
 const TABS: { id: CatalogTab; label: string }[] = [
   { id: "bolos", label: "Bolos" },
   { id: "tortas", label: "Tortas" },
+  { id: "tortas-corte", label: "Tortas de corte" },
   { id: "docinhos", label: "Docinhos" },
 ];
 
 function productTab(product: Product): CatalogTab {
+  if (
+    isTortasCorteProduct(product) ||
+    parseProductKind(product.kind) === "tortas-corte"
+  ) {
+    return "tortas-corte";
+  }
   if (isTortasProduct(product) || parseProductKind(product.kind) === "tortas") {
     return "tortas";
   }
@@ -33,13 +41,19 @@ function productTab(product: Product): CatalogTab {
 type Props = {
   products: Product[];
   tortaSizes?: TortaSizeOption[];
+  tortaCorteSizes?: TortaCorteSizeOption[];
 };
 
-export function CatalogProductTabs({ products, tortaSizes }: Props) {
+export function CatalogProductTabs({
+  products,
+  tortaSizes,
+  tortaCorteSizes,
+}: Props) {
   const grouped = useMemo(() => {
     const map: Record<CatalogTab, Product[]> = {
       bolos: [],
       tortas: [],
+      "tortas-corte": [],
       docinhos: [],
     };
     for (const product of products) {
@@ -109,6 +123,7 @@ export function CatalogProductTabs({ products, tortaSizes }: Props) {
               key={product.id}
               product={product}
               tortaSizes={tortaSizes}
+              tortaCorteSizes={tortaCorteSizes}
             />
           ))}
         </div>

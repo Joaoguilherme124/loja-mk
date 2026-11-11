@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
 import { readStore } from "@/lib/store";
-import { resolveTortaSizes } from "@/lib/product-kind";
+import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 import { buildGeneralWhatsAppLink } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,7 @@ export default async function HomePage() {
   const news = store.news.filter((n) => n.active).slice(0, 2);
   const heroImage = "/hero-mk-gourmet.jpg";
   const tortaSizes = resolveTortaSizes(store.settings);
+  const tortaCorteSizes = resolveTortaCorteSizes(store.settings);
 
   const activeProducts = store.products.filter((p) => p.active);
   const bolo =
@@ -134,6 +135,7 @@ export default async function HomePage() {
                   key={product.id}
                   product={product}
                   tortaSizes={tortaSizes}
+                  tortaCorteSizes={tortaCorteSizes}
                 />
               ))}
             </div>

@@ -32,7 +32,7 @@ function resolveCartCategory(item: {
   category?: string;
 }): CartCategory {
   if (item.kind === "bolos") return "bolos";
-  if (item.kind === "tortas") return "tortas";
+  if (item.kind === "tortas" || item.kind === "tortas-corte") return "tortas";
   if (item.kind === "docinhos") return "docinhos";
 
   // Categoria do cadastro (ex.: "bolo") + nome do item
