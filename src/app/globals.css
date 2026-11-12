@@ -37,7 +37,6 @@
 }
 
 html {
-  scroll-behavior: smooth;
   background: var(--cream);
 }
 
@@ -66,9 +65,8 @@ body {
   pointer-events: none;
   position: absolute;
   inset: 0;
-  opacity: 0.045;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
 }
 
 .reveal {
@@ -152,8 +150,7 @@ body {
   padding: 0.85rem 1.4rem;
   border-radius: 999px;
   font-weight: 600;
-  background: color-mix(in srgb, var(--foam) 70%, transparent);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--foam) 88%, white);
   transition: background 0.25s ease, transform 0.25s ease;
 }
 

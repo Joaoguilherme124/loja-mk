@@ -11,6 +11,7 @@ type Props = {
   className?: string;
   sizes?: string;
   priority?: boolean;
+  loading?: "lazy" | "eager";
 };
 
 function Placeholder({
@@ -53,6 +54,7 @@ export function SafeImage({
   className,
   sizes,
   priority,
+  loading = "eager",
 }: Props) {
   if (!src?.trim()) {
     return (
@@ -80,6 +82,8 @@ export function SafeImage({
         className={className}
         sizes={sizes}
         priority={priority}
+        loading={priority ? undefined : loading}
+        decoding="async"
       />
     );
   }
@@ -87,7 +91,13 @@ export function SafeImage({
   if (fill) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={alt} className={`absolute inset-0 h-full w-full ${className || ""}`} />
+      <img
+        src={src}
+        alt={alt}
+        className={`absolute inset-0 h-full w-full ${className || ""}`}
+        loading={loading}
+        decoding="async"
+      />
     );
   }
 
@@ -99,6 +109,8 @@ export function SafeImage({
       width={width}
       height={height}
       className={className}
+      loading={loading}
+      decoding="async"
     />
   );
 }

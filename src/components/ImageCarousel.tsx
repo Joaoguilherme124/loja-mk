@@ -49,6 +49,7 @@ export function ImageCarousel({
         className="object-cover"
         sizes={sizes}
         priority={priority}
+        loading="eager"
       />
       {hasMany ? (
         <>
