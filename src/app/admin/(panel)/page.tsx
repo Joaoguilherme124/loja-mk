@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { getDashboardCounts } from "@/lib/database";
+import { getDashboardCounts, getSettings } from "@/lib/database";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
-  const counts = await getDashboardCounts();
+  const [counts, settings] = await Promise.all([
+    getDashboardCounts(),
+    getSettings(),
+  ]);
 
   const cards = [
     {
@@ -38,7 +41,7 @@ export default async function AdminHomePage() {
       <div>
         <h1 className="font-display text-4xl text-espresso">Visão geral</h1>
         <p className="mt-2 text-espresso/70">
-          Bem-vinda ao painel de {store.settings.storeName}. Gerencie tudo por
+          Bem-vinda ao painel de {settings.storeName}. Gerencie tudo por
           aqui.
         </p>
       </div>
