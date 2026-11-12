@@ -38,13 +38,11 @@
 
 html {
   scroll-behavior: smooth;
+  background: var(--cream);
 }
 
 body {
-  background:
-    radial-gradient(ellipse 90% 60% at 10% -10%, rgba(176, 137, 104, 0.22), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(122, 85, 58, 0.12), transparent 50%),
-    linear-gradient(180deg, var(--foam) 0%, var(--cream) 45%, var(--cream-deep) 100%);
+  background: var(--cream);
   color: var(--foreground);
   font-family: var(--font-body), system-ui, sans-serif;
   min-height: 100vh;
