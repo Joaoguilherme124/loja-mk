@@ -24,6 +24,7 @@ import {
   isDocinhosProduct,
   isTortasCorteProduct,
   isTortasProduct,
+  productKindLabel,
   resolveTortaRatePerKg,
   TORTA_CHOCOLATE_EXTRA_PER_KG,
   TORTA_CORTE_SIZES,
@@ -182,7 +183,7 @@ function TortaDetail({
       <div className="space-y-6">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-mocha">
-            {product.category}
+            {productKindLabel(product)}
           </p>
           <h1 className="mt-2 font-display text-4xl text-espresso md:text-5xl">
             {product.name}
@@ -407,7 +408,7 @@ function DefaultProductDetail({ product }: Props) {
       <div className="space-y-6">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-mocha">
-            {product.category}
+            {productKindLabel(product)}
           </p>
           <h1 className="mt-2 font-display text-4xl text-espresso md:text-5xl">
             {product.name}
@@ -709,7 +710,7 @@ function TortaCorteDetail({
       <div className="space-y-6">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-mocha">
-            {product.category}
+            {productKindLabel(product)}
           </p>
           <h1 className="mt-2 font-display text-4xl text-espresso md:text-5xl">
             {product.name}

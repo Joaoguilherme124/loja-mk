@@ -149,11 +149,19 @@ export function parseProductKind(value: unknown): ProductKind {
   return "bolos";
 }
 
+export const TORTA_COVER_LABEL = "Cobertura em chantilly";
+
 export function kindCategory(kind: ProductKind) {
   if (kind === "docinhos") return "Docinhos";
-  if (kind === "tortas-corte") return "Tortas de corte";
-  if (kind === "tortas") return "Tortas";
+  if (kind === "tortas-corte" || kind === "tortas") return TORTA_COVER_LABEL;
   return "Bolos";
+}
+
+export function productKindLabel(
+  product: Pick<Product, "kind" | "category">
+) {
+  if (isTortaLikeProduct(product)) return TORTA_COVER_LABEL;
+  return product.category;
 }
 
 export function isDocinhosProduct(product: Pick<Product, "kind" | "variants">) {

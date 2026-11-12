@@ -10,6 +10,7 @@ import {
   isTortaLikeProduct,
   isTortasCorteProduct,
   isTortasProduct,
+  productKindLabel,
 } from "@/lib/product-kind";
 import { productGallery } from "@/lib/product-images";
 import { formatRate, parseSoldBy } from "@/lib/sold-by";
@@ -75,7 +76,7 @@ export function ProductCard({ product, tortaSizes, tortaCorteSizes }: Props) {
             className="outline-none focus-visible:ring-2 focus-visible:ring-mocha"
           >
             <p className="text-[11px] uppercase tracking-[0.16em] text-mocha/80">
-              {product.category}
+              {productKindLabel(product)}
             </p>
             <h3 className="mt-1 font-display text-xl leading-tight text-espresso md:text-2xl">
               {product.name}
