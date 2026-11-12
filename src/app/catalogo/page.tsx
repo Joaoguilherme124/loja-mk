@@ -4,13 +4,13 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
 import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
-import { readStore } from "@/lib/store";
+import { readStorefront } from "@/lib/store";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function CatalogPage() {
-  const store = await readStore();
-  const products = store.products.filter((p) => p.active);
+  const store = await readStorefront();
+  const products = store.products;
   const tortaSizes = resolveTortaSizes(store.settings);
   const tortaCorteSizes = resolveTortaCorteSizes(store.settings);
 

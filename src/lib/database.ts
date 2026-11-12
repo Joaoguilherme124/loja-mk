@@ -15,6 +15,7 @@ import type {
   Product,
   Promotion,
   StoreData,
+  StoreSettings,
   User,
 } from "./types";
 
@@ -182,6 +183,15 @@ async function initializeDatabase(): Promise<void> {
     ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS "extraAmount" DECIMAL(10, 2) NOT NULL DEFAULT 0
   `);
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS products_active_idx ON products (active);
+    CREATE INDEX IF NOT EXISTS products_kind_idx ON products (kind);
+    CREATE INDEX IF NOT EXISTS orders_created_idx ON orders ("createdAt" DESC);
+    CREATE INDEX IF NOT EXISTS orders_user_idx ON orders ("userId");
+    CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status);
+    CREATE INDEX IF NOT EXISTS promotions_active_idx ON promotions (active);
+    CREATE INDEX IF NOT EXISTS news_active_idx ON news (active);
+  `);
 
   const settings = await db.query('SELECT id FROM settings WHERE id = 1');
   if (settings.rowCount === 0) {
@@ -198,6 +208,85 @@ async function initializeDatabase(): Promise<void> {
       ]
     );
   }
+}
+
+function parseJsonField(raw: unknown): unknown {
+  if (typeof raw !== "string") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function mapSettings(s: QueryResultRow): StoreSettings {
+  return {
+    storeName: String(s.storeName),
+    tagline: String(s.tagline),
+    whatsapp: String(s.whatsapp),
+    about: String(s.about),
+    tortaSizes: resolveTortaSizes({
+      tortaSizes: parseJsonField((s as { tortaSizes?: unknown }).tortaSizes),
+    }),
+    tortaCorteSizes: resolveTortaCorteSizes({
+      tortaCorteSizes: parseJsonField(
+        (s as { tortaCorteSizes?: unknown }).tortaCorteSizes
+      ),
+    }),
+  };
+}
+
+function mapProduct(product: ProductRow): Product {
+  const images = parseImages(product.images, product.image);
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: Number(product.price),
+    soldBy: parseSoldBy(product.soldBy),
+    kind: parseProductKind(product.kind),
+    category: product.category,
+    image: images[0] || product.image || "",
+    images,
+    featured: Boolean(product.featured),
+    active: Boolean(product.active),
+    createdAt: new Date(product.createdAt).toISOString(),
+    variants: parseVariants(product.variants),
+  };
+}
+
+function mapOrder(order: OrderRow): Order {
+  return {
+    ...order,
+    items:
+      typeof order.items === "string"
+        ? (JSON.parse(order.items) as Order["items"])
+        : order.items ?? [],
+    totalPrice: Number(order.total),
+    extraAmount: Number(order.extraAmount) || 0,
+    deliveryDate: toDateOnly(order.deliveryDate),
+    deliveryTime: String(order.deliveryTime || ""),
+    createdAt: new Date(order.createdAt).toISOString(),
+    updatedAt: new Date(order.updatedAt).toISOString(),
+  };
+}
+
+function productWriteParams(product: Product) {
+  return [
+    product.id,
+    product.name,
+    product.description,
+    product.price,
+    product.category,
+    product.image,
+    JSON.stringify(product.images || (product.image ? [product.image] : [])),
+    product.featured,
+    product.active,
+    product.createdAt,
+    JSON.stringify(product.variants || []),
+    parseSoldBy(product.soldBy),
+    parseProductKind(product.kind),
+  ];
 }
 
 async function ensureDatabase(): Promise<void> {
@@ -225,70 +314,15 @@ export async function readDatabase(): Promise<DatabaseData> {
       db.query<NewsItem>("SELECT * FROM news"),
       db.query<OrderRow>('SELECT * FROM orders ORDER BY "createdAt" DESC'),
     ]);
-  const s = settingsResult.rows[0] ?? defaultStore.settings;
-  let tortaSizesRaw: unknown = (s as { tortaSizes?: unknown }).tortaSizes;
-  if (typeof tortaSizesRaw === "string") {
-    try {
-      tortaSizesRaw = JSON.parse(tortaSizesRaw);
-    } catch {
-      tortaSizesRaw = null;
-    }
-  }
-  let tortaCorteSizesRaw: unknown = (s as { tortaCorteSizes?: unknown })
-    .tortaCorteSizes;
-  if (typeof tortaCorteSizesRaw === "string") {
-    try {
-      tortaCorteSizesRaw = JSON.parse(tortaCorteSizesRaw);
-    } catch {
-      tortaCorteSizesRaw = null;
-    }
-  }
+  const s = settingsResult.rows[0];
 
   return {
-    settings: {
-      storeName: String(s.storeName),
-      tagline: String(s.tagline),
-      whatsapp: String(s.whatsapp),
-      about: String(s.about),
-      tortaSizes: resolveTortaSizes({ tortaSizes: tortaSizesRaw }),
-      tortaCorteSizes: resolveTortaCorteSizes({
-        tortaCorteSizes: tortaCorteSizesRaw,
-      }),
-    },
+    settings: s ? mapSettings(s) : defaultStore.settings,
     users: usersResult.rows.map((user) => ({ ...user, active: Boolean(user.active) })),
-    products: productsResult.rows.map((product) => {
-      const images = parseImages(product.images, product.image);
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: Number(product.price),
-        soldBy: parseSoldBy(product.soldBy),
-        kind: parseProductKind(product.kind),
-        category: product.category,
-        image: images[0] || product.image || "",
-        images,
-        featured: Boolean(product.featured),
-        active: Boolean(product.active),
-        createdAt: new Date(product.createdAt).toISOString(),
-        variants: parseVariants(product.variants),
-      } satisfies Product;
-    }),
+    products: productsResult.rows.map(mapProduct),
     promotions: promotionsResult.rows as Promotion[],
     news: newsResult.rows as NewsItem[],
-    orders: ordersResult.rows.map((order) => ({
-      ...order,
-      items:
-        typeof order.items === "string"
-          ? (JSON.parse(order.items) as Order["items"])
-          : order.items ?? [],
-      totalPrice: Number(order.total),
-      extraAmount: Number(order.extraAmount) || 0,
-      deliveryDate: toDateOnly(order.deliveryDate),
-      deliveryTime: String(order.deliveryTime || ""),
-      createdAt: new Date(order.createdAt).toISOString(),
-      updatedAt: new Date(order.updatedAt).toISOString(),
-    })),
+    orders: ordersResult.rows.map(mapOrder),
   };
 }
 
@@ -384,6 +418,364 @@ export async function writeDatabase(data: DatabaseData): Promise<void> {
   } finally {
     client.release();
   }
+}
+
+export async function getSettings(): Promise<StoreSettings> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return data.settings;
+  }
+  await ensureDatabase();
+  const result = await getPool().query("SELECT * FROM settings WHERE id = 1");
+  const row = result.rows[0];
+  return row ? mapSettings(row) : defaultStore.settings;
+}
+
+export async function updateSettingsRecord(
+  settings: StoreSettings
+): Promise<StoreSettings> {
+  const next: StoreSettings = {
+    ...settings,
+    tortaSizes: resolveTortaSizes(settings),
+    tortaCorteSizes: resolveTortaCorteSizes(settings),
+  };
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    data.settings = next;
+    await writeLocalDatabase(data);
+    return next;
+  }
+  await ensureDatabase();
+  await getPool().query(
+    'UPDATE settings SET "storeName" = $1, tagline = $2, whatsapp = $3, about = $4, "tortaSizes" = $5, "tortaCorteSizes" = $6 WHERE id = 1',
+    [
+      next.storeName,
+      next.tagline,
+      next.whatsapp,
+      next.about,
+      JSON.stringify(next.tortaSizes || []),
+      JSON.stringify(next.tortaCorteSizes || []),
+    ]
+  );
+  return next;
+}
+
+export async function listProducts(options?: {
+  activeOnly?: boolean;
+}): Promise<Product[]> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return options?.activeOnly
+      ? data.products.filter((product) => product.active)
+      : data.products;
+  }
+  await ensureDatabase();
+  const result = options?.activeOnly
+    ? await getPool().query<ProductRow>(
+        'SELECT * FROM products WHERE active = TRUE ORDER BY "createdAt" DESC'
+      )
+    : await getPool().query<ProductRow>(
+        'SELECT * FROM products ORDER BY "createdAt" DESC'
+      );
+  return result.rows.map(mapProduct);
+}
+
+export async function getProductById(id: string): Promise<Product | null> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return data.products.find((product) => product.id === id) || null;
+  }
+  await ensureDatabase();
+  const result = await getPool().query<ProductRow>(
+    "SELECT * FROM products WHERE id = $1",
+    [id]
+  );
+  const row = result.rows[0];
+  return row ? mapProduct(row) : null;
+}
+
+export async function insertProduct(product: Product): Promise<Product> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    data.products.unshift(product);
+    await writeLocalDatabase(data);
+    return product;
+  }
+  await ensureDatabase();
+  await getPool().query(
+    'INSERT INTO products (id, name, description, price, category, image, images, featured, active, "createdAt", variants, "soldBy", kind) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+    productWriteParams(product)
+  );
+  return product;
+}
+
+export async function updateProductRecord(product: Product): Promise<Product> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const index = data.products.findIndex((entry) => entry.id === product.id);
+    if (index < 0) throw new Error("Produto não encontrado");
+    data.products[index] = product;
+    await writeLocalDatabase(data);
+    return product;
+  }
+  await ensureDatabase();
+  const result = await getPool().query(
+    `UPDATE products SET
+      name = $2,
+      description = $3,
+      price = $4,
+      category = $5,
+      image = $6,
+      images = $7,
+      featured = $8,
+      active = $9,
+      variants = $11,
+      "soldBy" = $12,
+      kind = $13
+    WHERE id = $1`,
+    productWriteParams(product)
+  );
+  if (result.rowCount === 0) throw new Error("Produto não encontrado");
+  return product;
+}
+
+export async function deleteProductById(id: string): Promise<boolean> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const before = data.products.length;
+    data.products = data.products.filter((product) => product.id !== id);
+    if (data.products.length === before) return false;
+    await writeLocalDatabase(data);
+    return true;
+  }
+  await ensureDatabase();
+  const result = await getPool().query("DELETE FROM products WHERE id = $1", [
+    id,
+  ]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function listPromotions(options?: {
+  activeOnly?: boolean;
+}): Promise<Promotion[]> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return options?.activeOnly
+      ? data.promotions.filter((item) => item.active)
+      : data.promotions;
+  }
+  await ensureDatabase();
+  const result = options?.activeOnly
+    ? await getPool().query<Promotion>(
+        'SELECT * FROM promotions WHERE active = TRUE ORDER BY "createdAt" DESC'
+      )
+    : await getPool().query<Promotion>(
+        'SELECT * FROM promotions ORDER BY "createdAt" DESC'
+      );
+  return result.rows;
+}
+
+export async function insertPromotion(promotion: Promotion): Promise<Promotion> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    data.promotions.unshift(promotion);
+    await writeLocalDatabase(data);
+    return promotion;
+  }
+  await ensureDatabase();
+  await getPool().query(
+    'INSERT INTO promotions (id, title, description, "discountLabel", image, active, "createdAt") VALUES ($1, $2, $3, $4, $5, $6, $7)',
+    [
+      promotion.id,
+      promotion.title,
+      promotion.description,
+      promotion.discountLabel,
+      promotion.image,
+      promotion.active,
+      promotion.createdAt,
+    ]
+  );
+  return promotion;
+}
+
+export async function updatePromotionRecord(
+  promotion: Promotion
+): Promise<Promotion> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const index = data.promotions.findIndex((item) => item.id === promotion.id);
+    if (index < 0) throw new Error("Promoção não encontrada");
+    data.promotions[index] = promotion;
+    await writeLocalDatabase(data);
+    return promotion;
+  }
+  await ensureDatabase();
+  const result = await getPool().query(
+    'UPDATE promotions SET title = $2, description = $3, "discountLabel" = $4, image = $5, active = $6 WHERE id = $1',
+    [
+      promotion.id,
+      promotion.title,
+      promotion.description,
+      promotion.discountLabel,
+      promotion.image,
+      promotion.active,
+    ]
+  );
+  if (result.rowCount === 0) throw new Error("Promoção não encontrada");
+  return promotion;
+}
+
+export async function deletePromotionById(id: string): Promise<boolean> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const before = data.promotions.length;
+    data.promotions = data.promotions.filter((item) => item.id !== id);
+    if (data.promotions.length === before) return false;
+    await writeLocalDatabase(data);
+    return true;
+  }
+  await ensureDatabase();
+  const result = await getPool().query("DELETE FROM promotions WHERE id = $1", [
+    id,
+  ]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function listNews(options?: {
+  activeOnly?: boolean;
+}): Promise<NewsItem[]> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return options?.activeOnly
+      ? data.news.filter((item) => item.active)
+      : data.news;
+  }
+  await ensureDatabase();
+  const result = options?.activeOnly
+    ? await getPool().query<NewsItem>(
+        'SELECT * FROM news WHERE active = TRUE ORDER BY "createdAt" DESC'
+      )
+    : await getPool().query<NewsItem>(
+        'SELECT * FROM news ORDER BY "createdAt" DESC'
+      );
+  return result.rows;
+}
+
+export async function insertNewsItem(item: NewsItem): Promise<NewsItem> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    data.news.unshift(item);
+    await writeLocalDatabase(data);
+    return item;
+  }
+  await ensureDatabase();
+  await getPool().query(
+    'INSERT INTO news (id, title, content, image, active, "createdAt") VALUES ($1, $2, $3, $4, $5, $6)',
+    [item.id, item.title, item.content, item.image, item.active, item.createdAt]
+  );
+  return item;
+}
+
+export async function updateNewsRecord(item: NewsItem): Promise<NewsItem> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const index = data.news.findIndex((entry) => entry.id === item.id);
+    if (index < 0) throw new Error("Novidade não encontrada");
+    data.news[index] = item;
+    await writeLocalDatabase(data);
+    return item;
+  }
+  await ensureDatabase();
+  const result = await getPool().query(
+    "UPDATE news SET title = $2, content = $3, image = $4, active = $5 WHERE id = $1",
+    [item.id, item.title, item.content, item.image, item.active]
+  );
+  if (result.rowCount === 0) throw new Error("Novidade não encontrada");
+  return item;
+}
+
+export async function deleteNewsById(id: string): Promise<boolean> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    const before = data.news.length;
+    data.news = data.news.filter((item) => item.id !== id);
+    if (data.news.length === before) return false;
+    await writeLocalDatabase(data);
+    return true;
+  }
+  await ensureDatabase();
+  const result = await getPool().query("DELETE FROM news WHERE id = $1", [id]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function listOrders(options?: {
+  userId?: string;
+}): Promise<Order[]> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return options?.userId
+      ? data.orders.filter((order) => order.userId === options.userId)
+      : data.orders;
+  }
+  await ensureDatabase();
+  const result = options?.userId
+    ? await getPool().query<OrderRow>(
+        'SELECT * FROM orders WHERE "userId" = $1 ORDER BY "createdAt" DESC',
+        [options.userId]
+      )
+    : await getPool().query<OrderRow>(
+        'SELECT * FROM orders ORDER BY "createdAt" DESC'
+      );
+  return result.rows.map(mapOrder);
+}
+
+export type DashboardCounts = {
+  products: number;
+  promotions: number;
+  news: number;
+  orders: number;
+  pendingOrders: number;
+};
+
+export async function getDashboardCounts(): Promise<DashboardCounts> {
+  if (useLocalStore()) {
+    const data = await readLocalDatabase();
+    return {
+      products: data.products.length,
+      promotions: data.promotions.length,
+      news: data.news.length,
+      orders: data.orders.length,
+      pendingOrders: data.orders.filter((order) => order.status === "pendente")
+        .length,
+    };
+  }
+  await ensureDatabase();
+  const result = await getPool().query(
+    `SELECT
+      (SELECT COUNT(*)::int FROM products) AS products,
+      (SELECT COUNT(*)::int FROM promotions) AS promotions,
+      (SELECT COUNT(*)::int FROM news) AS news,
+      (SELECT COUNT(*)::int FROM orders) AS orders,
+      (SELECT COUNT(*)::int FROM orders WHERE status = 'pendente') AS pending`
+  );
+  const row = result.rows[0] || {};
+  return {
+    products: Number(row.products) || 0,
+    promotions: Number(row.promotions) || 0,
+    news: Number(row.news) || 0,
+    orders: Number(row.orders) || 0,
+    pendingOrders: Number(row.pending) || 0,
+  };
+}
+
+export async function getStorefront() {
+  const [settings, products, promotions, news] = await Promise.all([
+    getSettings(),
+    listProducts({ activeOnly: true }),
+    listPromotions({ activeOnly: true }),
+    listNews({ activeOnly: true }),
+  ]);
+  return { settings, products, promotions, news };
 }
 
 const ORDER_INSERT_SQL =
@@ -506,17 +898,5 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
   );
   const order = result.rows[0];
   if (!order) return null;
-  return {
-    ...order,
-    items:
-      typeof order.items === "string"
-        ? (JSON.parse(order.items) as Order["items"])
-        : order.items ?? [],
-    totalPrice: Number(order.total),
-    extraAmount: Number(order.extraAmount) || 0,
-    deliveryDate: toDateOnly(order.deliveryDate),
-    deliveryTime: String(order.deliveryTime || ""),
-    createdAt: new Date(order.createdAt).toISOString(),
-    updatedAt: new Date(order.updatedAt).toISOString(),
-  };
+  return mapOrder(order);
 }

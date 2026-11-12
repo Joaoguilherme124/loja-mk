@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { readStore, writeStore } from "@/lib/store";
+import {
+  deletePromotionById,
+  listPromotions,
+  updatePromotionRecord,
+} from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,28 +16,23 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await request.json();
-  const store = await readStore();
-  const index = store.promotions.findIndex((p) => p.id === id);
+  const promotions = await listPromotions();
+  const current = promotions.find((item) => item.id === id);
 
-  if (index < 0) {
+  if (!current) {
     return NextResponse.json({ error: "Promoção não encontrada" }, { status: 404 });
   }
 
-  store.promotions[index] = {
-    ...store.promotions[index],
-    title: String(body.title ?? store.promotions[index].title).trim(),
-    description: String(
-      body.description ?? store.promotions[index].description
-    ).trim(),
-    discountLabel: String(
-      body.discountLabel ?? store.promotions[index].discountLabel
-    ).trim(),
-    image: String(body.image ?? store.promotions[index].image).trim(),
+  const saved = await updatePromotionRecord({
+    ...current,
+    title: String(body.title ?? current.title).trim(),
+    description: String(body.description ?? current.description).trim(),
+    discountLabel: String(body.discountLabel ?? current.discountLabel).trim(),
+    image: String(body.image ?? current.image).trim(),
     active: body.active !== false,
-  };
-
-  await writeStore(store);
-  return NextResponse.json(store.promotions[index]);
+  });
+  revalidateStorefront();
+  return NextResponse.json(saved);
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
@@ -41,8 +41,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const store = await readStore();
-  store.promotions = store.promotions.filter((p) => p.id !== id);
-  await writeStore(store);
+  await deletePromotionById(id);
+  revalidateStorefront();
   return NextResponse.json({ ok: true });
 }

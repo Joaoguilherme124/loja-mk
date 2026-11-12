@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { readStore, writeStore } from "@/lib/store";
+import { deleteNewsById, listNews, updateNewsRecord } from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,23 +12,22 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await request.json();
-  const store = await readStore();
-  const index = store.news.findIndex((n) => n.id === id);
+  const news = await listNews();
+  const current = news.find((item) => item.id === id);
 
-  if (index < 0) {
+  if (!current) {
     return NextResponse.json({ error: "Novidade não encontrada" }, { status: 404 });
   }
 
-  store.news[index] = {
-    ...store.news[index],
-    title: String(body.title ?? store.news[index].title).trim(),
-    content: String(body.content ?? store.news[index].content).trim(),
-    image: String(body.image ?? store.news[index].image).trim(),
+  const saved = await updateNewsRecord({
+    ...current,
+    title: String(body.title ?? current.title).trim(),
+    content: String(body.content ?? current.content).trim(),
+    image: String(body.image ?? current.image).trim(),
     active: body.active !== false,
-  };
-
-  await writeStore(store);
-  return NextResponse.json(store.news[index]);
+  });
+  revalidateStorefront();
+  return NextResponse.json(saved);
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
@@ -36,8 +36,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const store = await readStore();
-  store.news = store.news.filter((n) => n.id !== id);
-  await writeStore(store);
+  await deleteNewsById(id);
+  revalidateStorefront();
   return NextResponse.json({ ok: true });
 }

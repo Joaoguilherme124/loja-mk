@@ -6,7 +6,8 @@ import {
   resolveTortaCorteSizes,
   resolveTortaSizes,
 } from "@/lib/product-kind";
-import { readStore, writeStore } from "@/lib/store";
+import { getSettings, updateSettingsRecord } from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,12 @@ function onlyDigits(value: unknown) {
 }
 
 export async function GET() {
-  const store = await readStore();
+  const settings = await getSettings();
   return NextResponse.json(
     {
-      ...store.settings,
-      tortaSizes: resolveTortaSizes(store.settings),
-      tortaCorteSizes: resolveTortaCorteSizes(store.settings),
+      ...settings,
+      tortaSizes: resolveTortaSizes(settings),
+      tortaCorteSizes: resolveTortaCorteSizes(settings),
     },
     {
       headers: { "Cache-Control": "no-store" },
@@ -34,28 +35,28 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json();
-  const store = await readStore();
+  const current = await getSettings();
 
   const storeName = String(
-    body.storeName !== undefined ? body.storeName : store.settings.storeName
+    body.storeName !== undefined ? body.storeName : current.storeName
   ).trim();
   const tagline = String(
-    body.tagline !== undefined ? body.tagline : store.settings.tagline
+    body.tagline !== undefined ? body.tagline : current.tagline
   ).trim();
   const about = String(
-    body.about !== undefined ? body.about : store.settings.about
+    body.about !== undefined ? body.about : current.about
   ).trim();
   const whatsapp = onlyDigits(
-    body.whatsapp !== undefined ? body.whatsapp : store.settings.whatsapp
+    body.whatsapp !== undefined ? body.whatsapp : current.whatsapp
   );
   const tortaSizes =
     body.tortaSizes !== undefined
       ? normalizeTortaSizes(body.tortaSizes)
-      : resolveTortaSizes(store.settings);
+      : resolveTortaSizes(current);
   const tortaCorteSizes =
     body.tortaCorteSizes !== undefined
       ? normalizeTortaCorteSizes(body.tortaCorteSizes)
-      : resolveTortaCorteSizes(store.settings);
+      : resolveTortaCorteSizes(current);
 
   if (!storeName) {
     return NextResponse.json(
@@ -88,23 +89,22 @@ export async function PUT(request: Request) {
     );
   }
 
-  store.settings = {
-    ...store.settings,
+  const settings = await updateSettingsRecord({
+    ...current,
     storeName,
     tagline,
     whatsapp,
     about,
     tortaSizes,
     tortaCorteSizes,
-  };
-
-  await writeStore(store);
+  });
+  revalidateStorefront();
 
   return NextResponse.json(
     {
-      ...store.settings,
-      tortaSizes: resolveTortaSizes(store.settings),
-      tortaCorteSizes: resolveTortaCorteSizes(store.settings),
+      ...settings,
+      tortaSizes: resolveTortaSizes(settings),
+      tortaCorteSizes: resolveTortaCorteSizes(settings),
     },
     {
       headers: { "Cache-Control": "no-store" },

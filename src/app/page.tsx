@@ -5,22 +5,22 @@ import { SafeImage } from "@/components/SafeImage";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StoreInfoSection } from "@/components/StoreInfoSection";
-import { readStore } from "@/lib/store";
+import { readStorefront } from "@/lib/store";
 import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 import { buildGeneralWhatsAppLink } from "@/lib/whatsapp";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function HomePage() {
-  const store = await readStore();
-  const featured = store.products.filter((p) => p.active && p.featured).slice(0, 3);
-  const promotions = store.promotions.filter((p) => p.active).slice(0, 1);
-  const news = store.news.filter((n) => n.active).slice(0, 2);
+  const store = await readStorefront();
+  const featured = store.products.filter((p) => p.featured).slice(0, 3);
+  const promotions = store.promotions.slice(0, 1);
+  const news = store.news.slice(0, 2);
   const heroImage = "/hero-mk-gourmet.jpg";
   const tortaSizes = resolveTortaSizes(store.settings);
   const tortaCorteSizes = resolveTortaCorteSizes(store.settings);
 
-  const activeProducts = store.products.filter((p) => p.active);
+  const activeProducts = store.products;
   const bolo =
     activeProducts.find((p) => /bolo/i.test(p.category) || /bolo/i.test(p.name)) ||
     null;

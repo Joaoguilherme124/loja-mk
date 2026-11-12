@@ -3,12 +3,15 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { parseVariants, withSyncedPricing } from "@/lib/product-variants";
 import { parseSoldBy } from "@/lib/sold-by";
 import { parseProductKind } from "@/lib/product-kind";
-import { createId, readStore, writeStore } from "@/lib/store";
+import { createId } from "@/lib/store";
+import { insertProduct, listProducts } from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 import type { Product } from "@/lib/types";
 
 export async function GET() {
-  const store = await readStore();
-  return NextResponse.json(store.products.filter((p) => p.active || true));
+  const admin = await isAdminAuthenticated();
+  const products = await listProducts({ activeOnly: !admin });
+  return NextResponse.json(products);
 }
 
 export async function POST(request: Request) {
@@ -17,7 +20,6 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const store = await readStore();
   const variants = parseVariants(body.variants);
 
   const product = withSyncedPricing({
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
     );
   }
 
-  store.products.unshift(product);
-  await writeStore(store);
+  await insertProduct(product);
+  revalidateStorefront();
   return NextResponse.json(product, { status: 201 });
 }

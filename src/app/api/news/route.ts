@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { createId, readStore, writeStore } from "@/lib/store";
+import { createId } from "@/lib/store";
+import { insertNewsItem, listNews } from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 import type { NewsItem } from "@/lib/types";
 
 export async function GET() {
-  const store = await readStore();
-  return NextResponse.json(store.news);
+  const admin = await isAdminAuthenticated();
+  const news = await listNews({ activeOnly: !admin });
+  return NextResponse.json(news);
 }
 
 export async function POST(request: Request) {
@@ -14,7 +17,6 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const store = await readStore();
 
   const item: NewsItem = {
     id: createId("news"),
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Título é obrigatório" }, { status: 400 });
   }
 
-  store.news.unshift(item);
-  await writeStore(store);
+  await insertNewsItem(item);
+  revalidateStorefront();
   return NextResponse.json(item, { status: 201 });
 }

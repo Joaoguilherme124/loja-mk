@@ -1,36 +1,33 @@
 import Link from "next/link";
-import { readStore } from "@/lib/store";
-import { readDatabase } from "@/lib/database";
+import { getDashboardCounts } from "@/lib/database";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
-  const store = await readStore();
-  const { orders } = await readDatabase();
-  const pendingOrders = orders.filter((o) => o.status === "pendente").length;
+  const counts = await getDashboardCounts();
 
   const cards = [
     {
       label: "Pedidos",
-      value: orders.length,
+      value: counts.orders,
       href: "/admin/pedidos",
-      hint: `${pendingOrders} pendentes`,
+      hint: `${counts.pendingOrders} pendentes`,
     },
     {
       label: "Produtos",
-      value: store.products.length,
+      value: counts.products,
       href: "/admin/produtos",
       hint: "Fotos, preços e catálogo",
     },
     {
       label: "Promoções",
-      value: store.promotions.length,
+      value: counts.promotions,
       href: "/admin/promocoes",
       hint: "Campanhas em destaque",
     },
     {
       label: "Novidades",
-      value: store.news.length,
+      value: counts.news,
       href: "/admin/novidades",
       hint: "Avisos da loja",
     },

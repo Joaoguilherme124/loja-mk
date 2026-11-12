@@ -5,8 +5,8 @@ import {
   buildDocinhoCartLabel,
   isDocinhosProduct,
 } from "@/lib/product-kind";
-import { createId, readStore } from "@/lib/store";
-import { insertOrder, readDatabase } from "@/lib/database";
+import { createId } from "@/lib/store";
+import { insertOrder, listOrders, listProducts } from "@/lib/database";
 import type { Order, OrderItem } from "@/lib/types";
 
 async function isAuthenticated(): Promise<string | null> {
@@ -54,13 +54,12 @@ export async function GET() {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const { orders } = await readDatabase();
+  const orders =
+    panelAdmin || userAdmin
+      ? await listOrders()
+      : await listOrders({ userId: userId || undefined });
 
-  if (panelAdmin || userAdmin) {
-    return NextResponse.json(orders);
-  }
-
-  return NextResponse.json(orders.filter((o) => o.userId === userId));
+  return NextResponse.json(orders);
 }
 
 export async function POST(request: Request) {
@@ -73,7 +72,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const store = await readStore();
+    const products = await listProducts();
 
     const rawItems = Array.isArray(body.items) ? body.items : [];
     const items: OrderItem[] = rawItems
@@ -83,7 +82,7 @@ export async function POST(request: Request) {
           quantity?: number;
           variantId?: string;
         }) => {
-          const product = store.products.find((p) => p.id === item.productId);
+          const product = products.find((p) => p.id === item.productId);
           if (!product) return null;
           const variant =
             (product.variants || []).find(

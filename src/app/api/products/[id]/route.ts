@@ -3,14 +3,18 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { parseVariants, withSyncedPricing } from "@/lib/product-variants";
 import { parseSoldBy } from "@/lib/sold-by";
 import { parseProductKind } from "@/lib/product-kind";
-import { readStore, writeStore } from "@/lib/store";
+import {
+  deleteProductById,
+  getProductById,
+  updateProductRecord,
+} from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const store = await readStore();
-  const product = store.products.find((p) => p.id === id);
+  const product = await getProductById(id);
   if (!product) {
     return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
   }
@@ -24,14 +28,12 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await request.json();
-  const store = await readStore();
-  const index = store.products.findIndex((p) => p.id === id);
+  const current = await getProductById(id);
 
-  if (index < 0) {
+  if (!current) {
     return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
   }
 
-  const current = store.products[index];
   const variants = parseVariants(
     body.variants !== undefined ? body.variants : current.variants
   );
@@ -73,9 +75,9 @@ export async function PUT(request: Request, { params }: Params) {
     );
   }
 
-  store.products[index] = product;
-  await writeStore(store);
-  return NextResponse.json(store.products[index]);
+  const saved = await updateProductRecord(product);
+  revalidateStorefront();
+  return NextResponse.json(saved);
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
@@ -84,8 +86,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const store = await readStore();
-  store.products = store.products.filter((p) => p.id !== id);
-  await writeStore(store);
+  await deleteProductById(id);
+  revalidateStorefront();
   return NextResponse.json({ ok: true });
 }

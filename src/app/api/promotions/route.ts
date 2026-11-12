@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { createId, readStore, writeStore } from "@/lib/store";
+import { createId } from "@/lib/store";
+import { insertPromotion, listPromotions } from "@/lib/database";
+import { revalidateStorefront } from "@/lib/revalidate-storefront";
 import type { Promotion } from "@/lib/types";
 
 export async function GET() {
-  const store = await readStore();
-  return NextResponse.json(store.promotions);
+  const admin = await isAdminAuthenticated();
+  const promotions = await listPromotions({ activeOnly: !admin });
+  return NextResponse.json(promotions);
 }
 
 export async function POST(request: Request) {
@@ -14,7 +17,6 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const store = await readStore();
 
   const promotion: Promotion = {
     id: createId("promo"),
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Título é obrigatório" }, { status: 400 });
   }
 
-  store.promotions.unshift(promotion);
-  await writeStore(store);
+  await insertPromotion(promotion);
+  revalidateStorefront();
   return NextResponse.json(promotion, { status: 201 });
 }

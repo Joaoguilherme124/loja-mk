@@ -1,19 +1,28 @@
-import { readDatabase, writeDatabase } from "./database";
-import { resolveTortaCorteSizes, resolveTortaSizes } from "./product-kind";
+import {
+  getStorefront,
+  listNews,
+  listProducts,
+  listPromotions,
+  getSettings,
+  readDatabase,
+  writeDatabase,
+} from "./database";
 import type { StoreData } from "./types";
 
+/** Vitrine: só settings e itens ativos, sem pedidos/usuários. */
+export async function readStorefront() {
+  return getStorefront();
+}
+
+/** Catálogo admin: produtos/promo/news completos, sem pedidos/usuários. */
 export async function readStore(): Promise<StoreData> {
-  const data = await readDatabase();
-  return {
-    settings: {
-      ...data.settings,
-      tortaSizes: resolveTortaSizes(data.settings),
-      tortaCorteSizes: resolveTortaCorteSizes(data.settings),
-    },
-    products: data.products,
-    promotions: data.promotions,
-    news: data.news,
-  };
+  const [settings, products, promotions, news] = await Promise.all([
+    getSettings(),
+    listProducts(),
+    listPromotions(),
+    listNews(),
+  ]);
+  return { settings, products, promotions, news };
 }
 
 export async function writeStore(data: StoreData): Promise<void> {
