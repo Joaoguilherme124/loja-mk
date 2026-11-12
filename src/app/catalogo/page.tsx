@@ -6,7 +6,7 @@ import { StoreInfoSection } from "@/components/StoreInfoSection";
 import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 import { readStorefront } from "@/lib/store";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function CatalogPage() {
   const store = await readStorefront();

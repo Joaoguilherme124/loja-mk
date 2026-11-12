@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { getProductById, getSettings } from "@/lib/database";
 import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;

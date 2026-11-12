@@ -9,7 +9,7 @@ import { readStorefront } from "@/lib/store";
 import { resolveTortaCorteSizes, resolveTortaSizes } from "@/lib/product-kind";
 import { buildGeneralWhatsAppLink } from "@/lib/whatsapp";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const store = await readStorefront();
