@@ -727,9 +727,10 @@ export default function AdminProductsPage() {
               {isTortasCorte ? (
                 <>
                   <p className="text-sm text-espresso/70">
-                    Tamanhos disponíveis para o cliente (edite aqui). Se
-                    escolher um sabor especial, a torta inteira usa o preço
-                    especial.
+                    Massa de chocolate: +{" "}
+                    {formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg. Tamanhos
+                    disponíveis para o cliente (edite aqui). Se escolher um
+                    sabor especial, a torta inteira usa o preço especial.
                   </p>
                   <TortaCorteSizesEditor />
                 </>

@@ -396,20 +396,24 @@ export function tortaCorteCatalogFromPrice(
 export function buildTortaCorteCartLabel(options: {
   productName: string;
   size: TortaCorteSizeOption;
+  massa: TortaMassa;
   flavors: { name: string }[];
 }) {
   const flavorNames = options.flavors.map((f) => f.name).join(" + ");
-  return `${options.productName} (${tortaCorteSizeLabel(options.size)}${
+  const massaLabel =
+    options.massa === "chocolate" ? "massa chocolate" : "massa tradicional";
+  return `${options.productName} (${tortaCorteSizeLabel(options.size)} · ${massaLabel}${
     flavorNames ? ` · ${flavorNames}` : ""
   })`;
 }
 
 export function buildTortaCorteVariantId(options: {
   sizeId: string;
+  massa: TortaMassa;
   flavorIds: string[];
 }) {
   const ids = [...options.flavorIds].sort().join("+");
-  return `torta-corte:${options.sizeId}:${ids}`;
+  return `torta-corte:${options.sizeId}:${options.massa}:${ids}`;
 }
 
 /** Preço de vitrine: menor tamanho × kg tradicional (sem chocolate). */

@@ -587,6 +587,7 @@ function TortaCorteDetail({
   const rates = getTortaRates(product);
   const groups = getTortaFlavors(product);
   const [size, setSize] = useState<TortaCorteSizeOption>(sizes[0]);
+  const [massa, setMassa] = useState<TortaMassa>("tradicional");
   const [selected, setSelected] = useState<TortaFlavorOption[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [flavorError, setFlavorError] = useState("");
@@ -608,12 +609,13 @@ function TortaCorteDetail({
   const unitPrice = calcTortaTotal({
     kg: size.kg,
     ratePerKg,
-    chocolate: false,
+    chocolate: massa === "chocolate",
   });
   const image = product.image;
   const displayName = buildTortaCorteCartLabel({
     productName: product.name,
     size,
+    massa,
     flavors: selected,
   });
   const canAdd = selected.length >= 1 && selected.length <= TORTA_MAX_FLAVORS;
@@ -642,6 +644,7 @@ function TortaCorteDetail({
         productId: product.id,
         variantId: buildTortaCorteVariantId({
           sizeId: size.id,
+          massa,
           flavorIds: selected.map((flavor) => flavor.id),
         }),
         name: displayName,
@@ -723,8 +726,8 @@ function TortaCorteDetail({
               {formatPrice(unitPrice)}
             </p>
             <p className="mt-3 text-sm leading-relaxed text-espresso/70">
-              Escolha a metragem e 1 ou 2 sabores. Se entrar um sabor especial,
-              o preço da torta inteira usa o valor especial por kg.
+              Escolha a metragem, a massa e 1 ou 2 sabores. Se entrar um sabor
+              especial, o preço da torta inteira usa o valor especial por kg.
             </p>
           </div>
 
@@ -748,6 +751,34 @@ function TortaCorteDetail({
                   <span className="block text-xs opacity-80">
                     {option.kg} kg · {option.fatias} fatias
                   </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-espresso">Massa</p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { id: "tradicional" as const, label: "Tradicional" },
+                  {
+                    id: "chocolate" as const,
+                    label: `Chocolate (+${formatPrice(TORTA_CHOCOLATE_EXTRA_PER_KG)}/kg)`,
+                  },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`rounded-full border px-4 py-2 text-sm ${
+                    massa === option.id
+                      ? "border-mocha bg-mocha text-foam"
+                      : "border-cappuccino bg-white/70 text-espresso"
+                  }`}
+                  onClick={() => setMassa(option.id)}
+                >
+                  {option.label}
                 </button>
               ))}
             </div>
